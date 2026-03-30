@@ -14,5 +14,11 @@ export default async function SettingsPage() {
   }
 
 
-  return <SettingsClient />;
+  return (
+    <SettingsClient
+      userName={session.user.name}
+      userEmail={session.user.email}
+      userImage={session.user.image ?? null}
+    />
+  );
 }
