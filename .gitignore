@@ -33,6 +33,7 @@ yarn-error.log*
 # env files
 .env
 .env.local
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
@@ -57,3 +58,4 @@ public/uploads/logos/*.jpeg
 public/uploads/logos/*.png
 public/uploads/logos/*.webp
 public/uploads/logos/*.svg
+
