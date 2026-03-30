@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File:*)",
+      "Bash(npm run db:generate:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(git fetch:*)",
+      "Bash(grep -E 'refs/heads/[0-9]+-homepage-admin-bulk$')",
+      "Bash(xargs grep:*)",
+      "Bash(dir \"E:\\\\FILESS\\\\fbrwithdocker\\\\src\\\\components\\\\clientcomponents\")",
+      "Bash(node -e \":*)",
+      "Bash(grep -ri 'fbr digital' E:/FILESS/fbrwithdocker/src --include=*.tsx --include=*.ts --include=*.json)",
+      "Bash(grep -ri 'digital invoicing portal' E:/FILESS/fbrwithdocker/src --include=*.tsx --include=*.ts)",
+      "Bash(ls -la \"E:/FILESS/fbrwithdocker/src/app/\\(dashboard\\)/settings/\")",
+      "Bash(bash .specify/scripts/bash/create-phr.sh --title \"Neon DB Mobile Responsive Production Ready\" --stage general --json)",
+      "Bash(ls E:/FILESS/fbrwithdocker/src/app/\\\\\\(dashboard\\\\\\)/settings/)",
+      "Bash(ls E:/FILESS/fbrwithdocker/src/app/\\\\\\(dashboard\\\\\\)/settings/business-profile/)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(cat \"E:/FILESS/fbrwithdocker/src/app/\\(dashboard\\)/settings/settings-client.tsx\")",
+      "Bash(find E:FILESSfbrwithdocker/node_modules/better-auth -name *.md)",
+      "Bash(npx next:*)"
+    ]
+  }
+}

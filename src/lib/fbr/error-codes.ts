@@ -1,0 +1,866 @@
+// FBR Error Code Catalog
+// Maps all 100+ FBR API error codes to user-friendly messages and form field paths
+// Sources: FBR Digital Invoicing API v1.12 (Sales: 0001–0402, Purchase: 0156–0177)
+
+export type FBRErrorSeverity = 'error' | 'warning';
+
+export interface FBRErrorEntry {
+  code: string;
+  userMessage: string;
+  fieldPath: string; // Form field path, 'items[n]' for line-item errors
+  severity: FBRErrorSeverity;
+}
+
+// 'items[n]' means the error references a specific line item (n = itemSNo - 1)
+
+export const FBR_ERROR_CODES: Record<string, FBRErrorEntry> = {
+  // ─── Invoice Header Errors ─────────────────────────────────────────────────
+
+  '0001': {
+    code: '0001',
+    userMessage: 'The seller NTN/CNIC is not registered for sales tax. Please verify your credentials.',
+    fieldPath: 'sellerNTNCNIC',
+    severity: 'error',
+  },
+  '0002': {
+    code: '0002',
+    userMessage: 'The buyer NTN/CNIC is invalid or not found in FBR records.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+  '0003': {
+    code: '0003',
+    userMessage: 'Invalid invoice type. Only "Sale Invoice" and "Debit Note" are accepted.',
+    fieldPath: 'invoiceType',
+    severity: 'error',
+  },
+  '0004': {
+    code: '0004',
+    userMessage: 'Invoice date is required.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0005': {
+    code: '0005',
+    userMessage: 'Invoice date format is invalid. Use YYYY-MM-DD format.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0006': {
+    code: '0006',
+    userMessage: 'Invoice date cannot be in the future.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0007': {
+    code: '0007',
+    userMessage: 'Invoice date is outside the allowed submission period.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0008': {
+    code: '0008',
+    userMessage: 'Seller NTN/CNIC is required.',
+    fieldPath: 'sellerNTNCNIC',
+    severity: 'error',
+  },
+  '0009': {
+    code: '0009',
+    userMessage: 'Seller NTN/CNIC format is invalid. Use 7 digits for NTN or 13 digits for CNIC.',
+    fieldPath: 'sellerNTNCNIC',
+    severity: 'error',
+  },
+  '0010': {
+    code: '0010',
+    userMessage: 'Buyer NTN/CNIC is required for registered buyers.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+  '0011': {
+    code: '0011',
+    userMessage: 'Buyer NTN/CNIC format is invalid.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+  '0012': {
+    code: '0012',
+    userMessage: 'Buyer province is required.',
+    fieldPath: 'buyerProvince',
+    severity: 'error',
+  },
+  '0013': {
+    code: '0013',
+    userMessage: 'Invalid buyer province code.',
+    fieldPath: 'buyerProvince',
+    severity: 'error',
+  },
+  '0014': {
+    code: '0014',
+    userMessage: 'Seller province is required.',
+    fieldPath: 'sellerProvince',
+    severity: 'error',
+  },
+  '0015': {
+    code: '0015',
+    userMessage: 'Invalid seller province code.',
+    fieldPath: 'sellerProvince',
+    severity: 'error',
+  },
+  '0016': {
+    code: '0016',
+    userMessage: 'Buyer business name is required.',
+    fieldPath: 'buyerBusinessName',
+    severity: 'error',
+  },
+  '0017': {
+    code: '0017',
+    userMessage: 'Seller business name is required.',
+    fieldPath: 'sellerBusinessName',
+    severity: 'error',
+  },
+  '0018': {
+    code: '0018',
+    userMessage: 'HS Code is required for this line item. Please enter a valid Harmonized System code.',
+    fieldPath: 'items[n].hsCode',
+    severity: 'error',
+  },
+  '0019': {
+    code: '0019',
+    userMessage: 'Tax rate is required for this line item.',
+    fieldPath: 'items[n].rate',
+    severity: 'error',
+  },
+  '0020': {
+    code: '0020',
+    userMessage: 'Sales value (excluding sales tax) is required for this line item.',
+    fieldPath: 'items[n].valueSalesExcludingST',
+    severity: 'error',
+  },
+  '0021': {
+    code: '0021',
+    userMessage: 'Sales tax amount is required for this line item.',
+    fieldPath: 'items[n].salesTaxApplicable',
+    severity: 'error',
+  },
+  '0022': {
+    code: '0022',
+    userMessage: 'Total value is required for this line item.',
+    fieldPath: 'items[n].totalValues',
+    severity: 'error',
+  },
+  '0023': {
+    code: '0023',
+    userMessage: 'Product description is required for this line item.',
+    fieldPath: 'items[n].productDescription',
+    severity: 'error',
+  },
+  '0024': {
+    code: '0024',
+    userMessage: 'Unit of measurement (UOM) is required for this line item.',
+    fieldPath: 'items[n].uom',
+    severity: 'error',
+  },
+  '0025': {
+    code: '0025',
+    userMessage: 'Quantity is required for this line item.',
+    fieldPath: 'items[n].quantity',
+    severity: 'error',
+  },
+  '0026': {
+    code: '0026',
+    userMessage: 'Invoice reference number is required for Debit Notes.',
+    fieldPath: 'invoiceRefNo',
+    severity: 'error',
+  },
+  '0027': {
+    code: '0027',
+    userMessage: 'Sale type is required for this line item.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0028': {
+    code: '0028',
+    userMessage: 'Invalid sale type for this line item.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0029': {
+    code: '0029',
+    userMessage: 'Buyer address is required.',
+    fieldPath: 'buyerAddress',
+    severity: 'error',
+  },
+  '0030': {
+    code: '0030',
+    userMessage: 'Seller address is required.',
+    fieldPath: 'sellerAddress',
+    severity: 'error',
+  },
+  '0031': {
+    code: '0031',
+    userMessage: 'Buyer registration type (Registered/Unregistered) is required.',
+    fieldPath: 'buyerRegistrationType',
+    severity: 'error',
+  },
+  '0032': {
+    code: '0032',
+    userMessage: 'Invalid buyer registration type.',
+    fieldPath: 'buyerRegistrationType',
+    severity: 'error',
+  },
+  '0033': {
+    code: '0033',
+    userMessage: 'The total sales tax amount does not match the sum of line items.',
+    fieldPath: 'totalTax',
+    severity: 'error',
+  },
+  '0034': {
+    code: '0034',
+    userMessage: 'Grand total does not match subtotal plus taxes.',
+    fieldPath: 'grandTotal',
+    severity: 'error',
+  },
+  '0035': {
+    code: '0035',
+    userMessage: 'Sales tax amount calculation error on this line item. Please verify rate and value.',
+    fieldPath: 'items[n].salesTaxApplicable',
+    severity: 'error',
+  },
+  '0036': {
+    code: '0036',
+    userMessage: 'Total value for this line item does not match calculated sum.',
+    fieldPath: 'items[n].totalValues',
+    severity: 'error',
+  },
+  '0037': {
+    code: '0037',
+    userMessage: 'Further tax calculation error. Please verify the further tax amount.',
+    fieldPath: 'items[n].furtherTax',
+    severity: 'error',
+  },
+  '0038': {
+    code: '0038',
+    userMessage: 'Extra tax calculation error.',
+    fieldPath: 'items[n].extraTax',
+    severity: 'error',
+  },
+  '0039': {
+    code: '0039',
+    userMessage: 'FED payable amount is required for this sale type.',
+    fieldPath: 'items[n].fedPayable',
+    severity: 'error',
+  },
+  '0040': {
+    code: '0040',
+    userMessage: 'SRO schedule number is required for this sale type.',
+    fieldPath: 'items[n].sroScheduleNo',
+    severity: 'error',
+  },
+  '0041': {
+    code: '0041',
+    userMessage: 'Invalid SRO schedule number.',
+    fieldPath: 'items[n].sroScheduleNo',
+    severity: 'error',
+  },
+  '0042': {
+    code: '0042',
+    userMessage: 'SRO item serial number is required.',
+    fieldPath: 'items[n].sroItemSerialNo',
+    severity: 'error',
+  },
+  '0043': {
+    code: '0043',
+    userMessage: 'SRO item serial number is invalid.',
+    fieldPath: 'items[n].sroItemSerialNo',
+    severity: 'error',
+  },
+  '0044': {
+    code: '0044',
+    userMessage: 'HS Code cannot be empty. Please enter a valid Harmonized System code.',
+    fieldPath: 'items[n].hsCode',
+    severity: 'error',
+  },
+  '0045': {
+    code: '0045',
+    userMessage: 'Invalid HS Code. Please verify the code against FBR HS code list.',
+    fieldPath: 'items[n].hsCode',
+    severity: 'error',
+  },
+  '0046': {
+    code: '0046',
+    userMessage: 'Tax rate cannot be empty. Please select a valid tax rate.',
+    fieldPath: 'items[n].rate',
+    severity: 'error',
+  },
+  '0047': {
+    code: '0047',
+    userMessage: 'Invalid tax rate. Please select from the approved rate list.',
+    fieldPath: 'items[n].rate',
+    severity: 'error',
+  },
+  '0048': {
+    code: '0048',
+    userMessage: 'Quantity must be greater than zero.',
+    fieldPath: 'items[n].quantity',
+    severity: 'error',
+  },
+  '0049': {
+    code: '0049',
+    userMessage: 'Sales value must be greater than zero.',
+    fieldPath: 'items[n].valueSalesExcludingST',
+    severity: 'error',
+  },
+  '0050': {
+    code: '0050',
+    userMessage: 'Invoice reference number format is invalid.',
+    fieldPath: 'invoiceRefNo',
+    severity: 'error',
+  },
+  '0051': {
+    code: '0051',
+    userMessage: 'The referenced invoice number was not found in FBR records.',
+    fieldPath: 'invoiceRefNo',
+    severity: 'error',
+  },
+  '0052': {
+    code: '0052',
+    userMessage: 'Duplicate invoice number. This invoice has already been submitted.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0053': {
+    code: '0053',
+    userMessage: 'Fixed or notified retail price is required for this sale type.',
+    fieldPath: 'items[n].fixedNotifiedValueOrRetailPrice',
+    severity: 'error',
+  },
+  '0054': {
+    code: '0054',
+    userMessage: 'Discount amount exceeds the sales value.',
+    fieldPath: 'items[n].discount',
+    severity: 'error',
+  },
+  '0055': {
+    code: '0055',
+    userMessage: 'UOM is not valid for the selected HS Code.',
+    fieldPath: 'items[n].uom',
+    severity: 'error',
+  },
+  '0056': {
+    code: '0056',
+    userMessage: 'Sales tax withheld at source amount is invalid.',
+    fieldPath: 'items[n].salesTaxWithheldAtSource',
+    severity: 'error',
+  },
+  '0057': {
+    code: '0057',
+    userMessage: 'The sales tax withheld exceeds the total sales tax amount.',
+    fieldPath: 'items[n].salesTaxWithheldAtSource',
+    severity: 'warning',
+  },
+  '0058': {
+    code: '0058',
+    userMessage: 'Item serial number (SNo) must be sequential starting from 1.',
+    fieldPath: 'items[n]',
+    severity: 'error',
+  },
+  '0059': {
+    code: '0059',
+    userMessage: 'Duplicate item serial number found in line items.',
+    fieldPath: 'items[n]',
+    severity: 'error',
+  },
+  '0060': {
+    code: '0060',
+    userMessage: 'At least one line item is required.',
+    fieldPath: 'items',
+    severity: 'error',
+  },
+  '0061': {
+    code: '0061',
+    userMessage: 'Maximum number of line items (100) exceeded.',
+    fieldPath: 'items',
+    severity: 'error',
+  },
+  '0062': {
+    code: '0062',
+    userMessage: 'The invoice subtotal does not match the sum of line item values.',
+    fieldPath: 'subtotal',
+    severity: 'error',
+  },
+  '0063': {
+    code: '0063',
+    userMessage: 'Buyer business name cannot exceed 255 characters.',
+    fieldPath: 'buyerBusinessName',
+    severity: 'error',
+  },
+  '0064': {
+    code: '0064',
+    userMessage: 'Seller business name cannot exceed 255 characters.',
+    fieldPath: 'sellerBusinessName',
+    severity: 'error',
+  },
+  '0065': {
+    code: '0065',
+    userMessage: 'The invoice type does not match the referenced invoice.',
+    fieldPath: 'invoiceType',
+    severity: 'error',
+  },
+  '0066': {
+    code: '0066',
+    userMessage: 'Buyer NTN/CNIC does not match the referenced invoice buyer.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+  '0067': {
+    code: '0067',
+    userMessage: 'Tax period is closed. Invoices for this period can no longer be submitted.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0068': {
+    code: '0068',
+    userMessage: 'Invoice date is before the seller registration date.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0069': {
+    code: '0069',
+    userMessage: 'The tax rate does not match the applicable rate for the sale type.',
+    fieldPath: 'items[n].rate',
+    severity: 'error',
+  },
+  '0070': {
+    code: '0070',
+    userMessage: 'Further tax is not applicable for unregistered buyers in this scenario.',
+    fieldPath: 'items[n].furtherTax',
+    severity: 'error',
+  },
+  '0071': {
+    code: '0071',
+    userMessage: 'Further tax amount must be 2% of the sales value for unregistered buyers.',
+    fieldPath: 'items[n].furtherTax',
+    severity: 'error',
+  },
+  '0072': {
+    code: '0072',
+    userMessage: 'Reduced rate scenario requires special SRO reference.',
+    fieldPath: 'items[n].sroScheduleNo',
+    severity: 'error',
+  },
+  '0073': {
+    code: '0073',
+    userMessage: 'Zero-rated goods require explicit zero-rate classification.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0074': {
+    code: '0074',
+    userMessage: 'Exempt goods cannot have a non-zero sales tax amount.',
+    fieldPath: 'items[n].salesTaxApplicable',
+    severity: 'error',
+  },
+  '0075': {
+    code: '0075',
+    userMessage: 'FED in Sales Tax mode — FED amount must equal the applicable FED rate.',
+    fieldPath: 'items[n].fedPayable',
+    severity: 'error',
+  },
+  '0076': {
+    code: '0076',
+    userMessage: 'Steel/scrap commodity requires a valid HS code from the steel category.',
+    fieldPath: 'items[n].hsCode',
+    severity: 'error',
+  },
+  '0077': {
+    code: '0077',
+    userMessage: 'Petroleum product requires the petroleum-specific sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0078': {
+    code: '0078',
+    userMessage: 'Telecom services must use the telecom sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0079': {
+    code: '0079',
+    userMessage: 'Electricity supply must use the electricity retailer sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0080': {
+    code: '0080',
+    userMessage: 'Gas/CNG supply must use the gas/CNG sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0081': {
+    code: '0081',
+    userMessage: 'Mobile phone sale requires the mobile phone sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0082': {
+    code: '0082',
+    userMessage: 'Cement product requires the cement sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0083': {
+    code: '0083',
+    userMessage: '3rd Schedule goods require the 3rd Schedule sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0084': {
+    code: '0084',
+    userMessage: 'Drug/pharmaceutical product requires the drug (8th Schedule) sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0085': {
+    code: '0085',
+    userMessage: 'Electric vehicle sale requires the EV sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0086': {
+    code: '0086',
+    userMessage: 'Cotton ginner sale requires the cotton ginner sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0087': {
+    code: '0087',
+    userMessage: 'Ship breaking requires the ship breaker sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0088': {
+    code: '0088',
+    userMessage: 'Toll manufacturing sale type is required for this product.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0089': {
+    code: '0089',
+    userMessage: 'Potassium chlorate requires the appropriate chemical sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0090': {
+    code: '0090',
+    userMessage: 'SRO 297 goods require the SRO-297 sale type and reference.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0091': {
+    code: '0091',
+    userMessage: 'Retailer end-consumer sale type requires specific classification.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0092': {
+    code: '0092',
+    userMessage: 'Processing/conversion sale type is required for toll manufacturing services.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0093': {
+    code: '0093',
+    userMessage: 'Services sale type is required for service invoices.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0094': {
+    code: '0094',
+    userMessage: 'Discount amount cannot be negative.',
+    fieldPath: 'items[n].discount',
+    severity: 'error',
+  },
+  '0095': {
+    code: '0095',
+    userMessage: 'Invoice has too many line items. Maximum is 100 items per invoice.',
+    fieldPath: 'items',
+    severity: 'error',
+  },
+  '0096': {
+    code: '0096',
+    userMessage: 'Debit note amount cannot exceed the original invoice amount.',
+    fieldPath: 'items[n].valueSalesExcludingST',
+    severity: 'error',
+  },
+  '0097': {
+    code: '0097',
+    userMessage: 'Debit note date cannot be before the original invoice date.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0098': {
+    code: '0098',
+    userMessage: 'Sales value must match the quantity multiplied by unit price.',
+    fieldPath: 'items[n].valueSalesExcludingST',
+    severity: 'error',
+  },
+  '0099': {
+    code: '0099',
+    userMessage: 'Tax declaration period has expired for this invoice date.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0100': {
+    code: '0100',
+    userMessage: 'The invoice contains items with conflicting sale types.',
+    fieldPath: 'items',
+    severity: 'error',
+  },
+  '0101': {
+    code: '0101',
+    userMessage: 'Seller is not registered for the declared sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0102': {
+    code: '0102',
+    userMessage: 'Buyer province does not match registered province.',
+    fieldPath: 'buyerProvince',
+    severity: 'warning',
+  },
+  '0103': {
+    code: '0103',
+    userMessage: 'Seller province does not match registered province.',
+    fieldPath: 'sellerProvince',
+    severity: 'warning',
+  },
+  '0104': {
+    code: '0104',
+    userMessage: 'The product description is too long (max 500 characters).',
+    fieldPath: 'items[n].productDescription',
+    severity: 'error',
+  },
+  '0105': {
+    code: '0105',
+    userMessage: 'FED amount must be zero for goods not subject to FED.',
+    fieldPath: 'items[n].fedPayable',
+    severity: 'error',
+  },
+  '0106': {
+    code: '0106',
+    userMessage: 'Buyer NTN/CNIC is required when buyer province is set.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+  '0107': {
+    code: '0107',
+    userMessage: 'Seller NTN/CNIC cannot be the same as buyer NTN/CNIC.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+  '0108': {
+    code: '0108',
+    userMessage: 'Transaction type does not match the declared sale type.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0109': {
+    code: '0109',
+    userMessage: 'Quantity decimal precision is too high. Maximum 4 decimal places allowed.',
+    fieldPath: 'items[n].quantity',
+    severity: 'error',
+  },
+  '0110': {
+    code: '0110',
+    userMessage: 'Amount precision is too high. Maximum 2 decimal places allowed.',
+    fieldPath: 'items[n].valueSalesExcludingST',
+    severity: 'error',
+  },
+  '0111': {
+    code: '0111',
+    userMessage: 'This FBR invoice number is already used.',
+    fieldPath: 'invoiceRefNo',
+    severity: 'error',
+  },
+  '0112': {
+    code: '0112',
+    userMessage: 'The invoice submission window for this period has closed.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0113': {
+    code: '0113',
+    userMessage: 'An unexpected validation error occurred. Please retry or contact support.',
+    fieldPath: '',
+    severity: 'error',
+  },
+
+  // ─── System/Authentication Errors ─────────────────────────────────────────
+
+  '0300': {
+    code: '0300',
+    userMessage: 'FBR system error. Please retry in a few minutes.',
+    fieldPath: '',
+    severity: 'error',
+  },
+  '0401': {
+    code: '0401',
+    userMessage: 'The FBR seller token is invalid or expired. Please contact your system administrator.',
+    fieldPath: '',
+    severity: 'error',
+  },
+  '0402': {
+    code: '0402',
+    userMessage: 'The buyer token is invalid. Please verify the buyer NTN/CNIC.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+
+  // ─── Purchase / Debit Note Errors (0156–0177) ─────────────────────────────
+
+  '0156': {
+    code: '0156',
+    userMessage: 'Purchase invoice seller NTN/CNIC is invalid.',
+    fieldPath: 'sellerNTNCNIC',
+    severity: 'error',
+  },
+  '0157': {
+    code: '0157',
+    userMessage: 'Purchase invoice buyer NTN/CNIC is invalid.',
+    fieldPath: 'buyerNTNCNIC',
+    severity: 'error',
+  },
+  '0158': {
+    code: '0158',
+    userMessage: 'Purchase invoice date is invalid.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0159': {
+    code: '0159',
+    userMessage: 'Purchase invoice total does not match sum of line items.',
+    fieldPath: 'grandTotal',
+    severity: 'error',
+  },
+  '0160': {
+    code: '0160',
+    userMessage: 'Purchase invoice HS code is invalid.',
+    fieldPath: 'items[n].hsCode',
+    severity: 'error',
+  },
+  '0161': {
+    code: '0161',
+    userMessage: 'Purchase invoice line item tax amount is incorrect.',
+    fieldPath: 'items[n].salesTaxApplicable',
+    severity: 'error',
+  },
+  '0162': {
+    code: '0162',
+    userMessage: 'Purchase invoice seller is not registered for the declared goods.',
+    fieldPath: 'sellerNTNCNIC',
+    severity: 'error',
+  },
+  '0163': {
+    code: '0163',
+    userMessage: 'Purchase invoice already exists with this reference number.',
+    fieldPath: 'invoiceRefNo',
+    severity: 'error',
+  },
+  '0164': {
+    code: '0164',
+    userMessage: 'Purchase invoice amount exceeds the limit for unregistered transactions.',
+    fieldPath: 'grandTotal',
+    severity: 'error',
+  },
+  '0165': {
+    code: '0165',
+    userMessage: 'Purchase invoice sale type is not valid for the declared goods.',
+    fieldPath: 'items[n].saleType',
+    severity: 'error',
+  },
+  '0166': {
+    code: '0166',
+    userMessage: 'Purchase invoice is missing required reference number.',
+    fieldPath: 'invoiceRefNo',
+    severity: 'error',
+  },
+  '0167': {
+    code: '0167',
+    userMessage: 'Purchase invoice province mismatch.',
+    fieldPath: 'buyerProvince',
+    severity: 'error',
+  },
+  '0168': {
+    code: '0168',
+    userMessage: 'Purchase invoice line item quantity is zero or negative.',
+    fieldPath: 'items[n].quantity',
+    severity: 'error',
+  },
+  '0169': {
+    code: '0169',
+    userMessage: 'Purchase invoice UOM is invalid for this HS code.',
+    fieldPath: 'items[n].uom',
+    severity: 'error',
+  },
+  '0170': {
+    code: '0170',
+    userMessage: 'Purchase invoice submission period has expired.',
+    fieldPath: 'invoiceDate',
+    severity: 'error',
+  },
+  '0171': {
+    code: '0171',
+    userMessage: 'Purchase invoice tax withheld amount is incorrect.',
+    fieldPath: 'items[n].salesTaxWithheldAtSource',
+    severity: 'error',
+  },
+  '0172': {
+    code: '0172',
+    userMessage: 'Purchase invoice FED amount is not applicable for this item.',
+    fieldPath: 'items[n].fedPayable',
+    severity: 'error',
+  },
+  '0173': {
+    code: '0173',
+    userMessage: 'Purchase invoice extra tax calculation is incorrect.',
+    fieldPath: 'items[n].extraTax',
+    severity: 'error',
+  },
+  '0174': {
+    code: '0174',
+    userMessage: 'Purchase invoice further tax is not applicable for registered buyers.',
+    fieldPath: 'items[n].furtherTax',
+    severity: 'error',
+  },
+  '0175': {
+    code: '0175',
+    userMessage: 'Purchase invoice SRO reference is invalid.',
+    fieldPath: 'items[n].sroScheduleNo',
+    severity: 'error',
+  },
+  '0176': {
+    code: '0176',
+    userMessage: 'Purchase invoice discount amount is incorrect.',
+    fieldPath: 'items[n].discount',
+    severity: 'error',
+  },
+  '0177': {
+    code: '0177',
+    userMessage: 'Purchase invoice validation failed with an unspecified error.',
+    fieldPath: '',
+    severity: 'error',
+  },
+};
+
+/**
+ * Look up a friendly error entry by code.
+ * Returns a generic fallback if the code is not in the catalog.
+ */
+export function getErrorEntry(code: string): FBRErrorEntry {
+  return FBR_ERROR_CODES[code] ?? {
+    code,
+    userMessage: `FBR validation error (code ${code}). Please review the invoice and try again.`,
+    fieldPath: '',
+    severity: 'error',
+  };
+}

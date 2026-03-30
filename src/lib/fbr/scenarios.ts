@@ -1,0 +1,243 @@
+// FBR Sandbox Scenarios Configuration
+// 28 scenarios (SN001–SN028) for testing all FBR invoice submission flows
+
+export interface FBRScenario {
+  id: string;
+  description: string;
+  saleType: string;
+  taxVariant: string;
+  requiredFields: string[];
+  notes?: string;
+}
+
+export const FBR_SCENARIOS: FBRScenario[] = [
+  {
+    id: 'SN001',
+    description: 'Standard Rate — Registered Buyer',
+    saleType: 'Goods at standard rate (default)',
+    taxVariant: '18%',
+    requiredFields: ['buyerNTNCNIC', 'hsCode', 'rate'],
+    notes: 'Most common scenario. Buyer is registered for sales tax.',
+  },
+  {
+    id: 'SN002',
+    description: 'Standard Rate — Unregistered Buyer',
+    saleType: 'Goods at standard rate (default)',
+    taxVariant: '18% + 2% further tax',
+    requiredFields: ['hsCode', 'rate', 'furtherTax'],
+    notes: 'Buyer is unregistered. 2% further tax applies on top of 18%.',
+  },
+  {
+    id: 'SN003',
+    description: 'Steel Melting / Re-rolled Products',
+    saleType: 'Steel Melting/Re-Rolling',
+    taxVariant: '17%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Special rate for melted/re-rolled steel products.',
+  },
+  {
+    id: 'SN004',
+    description: 'Ship Breakers',
+    saleType: 'Ship Breakers',
+    taxVariant: '17%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Ship breaking and scrap steel from vessels.',
+  },
+  {
+    id: 'SN005',
+    description: 'Reduced Rate Goods',
+    saleType: 'Goods at reduced rate',
+    taxVariant: '5%',
+    requiredFields: ['hsCode', 'rate', 'sroScheduleNo'],
+    notes: 'Goods attracting reduced ST rate under SRO exemption.',
+  },
+  {
+    id: 'SN006',
+    description: 'Exempt Goods',
+    saleType: 'Exempt Goods',
+    taxVariant: '0%',
+    requiredFields: ['hsCode', 'saleType'],
+    notes: 'Goods completely exempt from sales tax. Tax must be zero.',
+  },
+  {
+    id: 'SN007',
+    description: 'Zero Rated Goods (Exports)',
+    saleType: 'Zero-rated Goods',
+    taxVariant: '0%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Zero-rated goods — distinct from exempt (used for exports).',
+  },
+  {
+    id: 'SN008',
+    description: '3rd Schedule Goods (Retail Price)',
+    saleType: '3rd Schedule Goods',
+    taxVariant: '18% on retail price',
+    requiredFields: ['hsCode', 'rate', 'fixedNotifiedValueOrRetailPrice'],
+    notes: 'Tax calculated on fixed/notified retail price, not transaction value.',
+  },
+  {
+    id: 'SN009',
+    description: 'Cotton Ginners',
+    saleType: 'Cotton Ginners',
+    taxVariant: '7%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Cotton ginning and associated agricultural processing.',
+  },
+  {
+    id: 'SN010',
+    description: 'Telecom Services',
+    saleType: 'Telecom Services',
+    taxVariant: '19.5%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Telecom services taxed at higher rate.',
+  },
+  {
+    id: 'SN011',
+    description: 'Toll Manufacturing — Steel',
+    saleType: 'Toll Manufacturing (Steel)',
+    taxVariant: '17%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Processing/conversion services for steel products.',
+  },
+  {
+    id: 'SN012',
+    description: 'Petroleum Products',
+    saleType: 'Petroleum Products',
+    taxVariant: 'Specific per litre',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'POL products have specific fixed tax per unit.',
+  },
+  {
+    id: 'SN013',
+    description: 'Electricity Retailers',
+    saleType: 'Electricity (Retailers)',
+    taxVariant: '17%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Electricity distribution and retailing.',
+  },
+  {
+    id: 'SN014',
+    description: 'Natural Gas / CNG',
+    saleType: 'Gas/CNG',
+    taxVariant: '17%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Natural gas and compressed natural gas sales.',
+  },
+  {
+    id: 'SN015',
+    description: 'Mobile Phones',
+    saleType: 'Mobile Phones',
+    taxVariant: 'Specific per device',
+    requiredFields: ['hsCode', 'rate', 'saleType', 'fixedNotifiedValueOrRetailPrice'],
+    notes: 'Mobile phone sales with fixed/notified retail price.',
+  },
+  {
+    id: 'SN016',
+    description: 'Processing / Conversion Services',
+    saleType: 'Processing/Conversion',
+    taxVariant: '18%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Industrial processing and conversion services.',
+  },
+  {
+    id: 'SN017',
+    description: 'FED in Sales Tax Mode — Goods',
+    saleType: 'Goods (FED in ST Mode)',
+    taxVariant: 'FED applicable',
+    requiredFields: ['hsCode', 'rate', 'fedPayable', 'saleType'],
+    notes: 'Goods where Federal Excise Duty is collected in sales tax mode.',
+  },
+  {
+    id: 'SN018',
+    description: 'FED in Sales Tax Mode — Services',
+    saleType: 'Services (FED in ST Mode)',
+    taxVariant: 'FED applicable',
+    requiredFields: ['hsCode', 'rate', 'fedPayable', 'saleType'],
+    notes: 'Services where Federal Excise Duty is collected in sales tax mode.',
+  },
+  {
+    id: 'SN019',
+    description: 'Services',
+    saleType: 'Services',
+    taxVariant: '16%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'General services taxable under provincial/federal ST.',
+  },
+  {
+    id: 'SN020',
+    description: 'Electric Vehicles',
+    saleType: 'Electric Vehicles',
+    taxVariant: '1%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Electric vehicles under EV incentive policy.',
+  },
+  {
+    id: 'SN021',
+    description: 'Cement',
+    saleType: 'Cement',
+    taxVariant: 'PKR 2/kg or 17%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Cement products — duty at higher of per-kg rate or ad valorem.',
+  },
+  {
+    id: 'SN022',
+    description: 'Potassium Chlorate',
+    saleType: 'Potassium Chlorate',
+    taxVariant: '17%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Chemical compound — requires specific classification.',
+  },
+  {
+    id: 'SN023',
+    description: 'CNG (Compressed Natural Gas)',
+    saleType: 'CNG',
+    taxVariant: 'Specific per MMBTU',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'CNG fuel sales.',
+  },
+  {
+    id: 'SN024',
+    description: 'SRO 297 Goods',
+    saleType: 'SRO 297 Goods',
+    taxVariant: 'Reduced per SRO',
+    requiredFields: ['hsCode', 'rate', 'saleType', 'sroScheduleNo'],
+    notes: 'Goods notified under SRO 297 with special rate.',
+  },
+  {
+    id: 'SN025',
+    description: 'Drugs (8th Schedule)',
+    saleType: 'Drugs (8th Schedule)',
+    taxVariant: 'Exempt / 5%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Pharmaceutical drugs under 8th Schedule exemption or reduced rate.',
+  },
+  {
+    id: 'SN026',
+    description: 'Retailer — End Consumer Sale',
+    saleType: 'Retailer (End Consumer)',
+    taxVariant: '18%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Retailer selling to final consumer.',
+  },
+  {
+    id: 'SN027',
+    description: 'Retailer — Registered Purchaser',
+    saleType: 'Retailer (Registered Purchaser)',
+    taxVariant: '18%',
+    requiredFields: ['buyerNTNCNIC', 'hsCode', 'rate', 'saleType'],
+    notes: 'Retailer selling to a registered buyer.',
+  },
+  {
+    id: 'SN028',
+    description: 'Retailer — Non-Consumer Unregistered',
+    saleType: 'Retailer (Unregistered Non-Consumer)',
+    taxVariant: '18% + 2% further',
+    requiredFields: ['hsCode', 'rate', 'furtherTax', 'saleType'],
+    notes: 'Retailer selling to unregistered non-consumer buyer.',
+  },
+];
+
+/** Look up a scenario by ID */
+export function getScenario(id: string): FBRScenario | undefined {
+  return FBR_SCENARIOS.find((s) => s.id === id);
+}

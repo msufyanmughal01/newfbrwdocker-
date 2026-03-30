@@ -1,0 +1,148 @@
+'use client';
+
+// SubmissionStatus — animated step-by-step FBR submission progress
+// Shows: Validating → Validated → Submitting → Issued (or Failed)
+
+import type { InvoiceStatus } from '@/lib/fbr/status-machine';
+
+interface SubmissionStatusProps {
+  status: InvoiceStatus;
+  fbrInvoiceNumber?: string;
+  error?: string;
+}
+
+interface Step {
+  key: InvoiceStatus;
+  label: string;
+  activeLabel: string;
+}
+
+const STEPS: Step[] = [
+  { key: 'validating', label: 'Validate', activeLabel: 'Validating with FBR...' },
+  { key: 'validated', label: 'Validated', activeLabel: 'Validation passed' },
+  { key: 'submitting', label: 'Submit', activeLabel: 'Submitting to FBR...' },
+  { key: 'issued', label: 'Issued', activeLabel: 'Invoice Issued' },
+];
+
+const STATUS_ORDER: InvoiceStatus[] = [
+  'draft',
+  'validating',
+  'validated',
+  'submitting',
+  'issued',
+  'failed',
+];
+
+function getStepIndex(status: InvoiceStatus): number {
+  return STATUS_ORDER.indexOf(status);
+}
+
+export function SubmissionStatus({
+  status,
+  fbrInvoiceNumber,
+  error,
+}: SubmissionStatusProps) {
+  const isFailed = status === 'failed';
+  const currentIdx = getStepIndex(status);
+
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
+      <h3 className="mb-4 text-sm font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">
+        FBR Submission Progress
+      </h3>
+
+      {/* Step indicators */}
+      <div className="flex items-center gap-2 mb-6">
+        {STEPS.map((step, i) => {
+          const stepIdx = getStepIndex(step.key);
+          const isCompleted = !isFailed && currentIdx > stepIdx;
+          const isActive = !isFailed && currentIdx === stepIdx;
+          const isFutureOrFailed =
+            isFailed || currentIdx < stepIdx;
+
+          return (
+            <div key={step.key} className="flex items-center flex-1">
+              {/* Circle */}
+              <div
+                className={`
+                  flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all
+                  ${isCompleted ? 'bg-[var(--positive)] text-white' : ''}
+                  ${isActive && !isFailed ? 'bg-[var(--info)] text-white animate-pulse' : ''}
+                  ${isFutureOrFailed && !isCompleted && !isActive ? 'bg-[var(--surface-3)] text-[var(--foreground-subtle)]' : ''}
+                `}
+              >
+                {isCompleted ? (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : isActive ? (
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <span>{i + 1}</span>
+                )}
+              </div>
+
+              {/* Label */}
+              <span
+                className={`
+                  ml-1 text-xs font-medium truncate
+                  ${isCompleted ? 'text-[var(--positive)]' : ''}
+                  ${isActive ? 'text-[var(--info)]' : ''}
+                  ${isFutureOrFailed && !isCompleted && !isActive ? 'text-[var(--foreground-subtle)]' : ''}
+                `}
+              >
+                {isActive ? step.activeLabel : step.label}
+              </span>
+
+              {/* Connector line (not after last) */}
+              {i < STEPS.length - 1 && (
+                <div
+                  className={`
+                    ml-2 h-0.5 flex-1 transition-all
+                    ${isCompleted ? 'bg-[var(--positive)]' : 'bg-[var(--border)]'}
+                  `}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Success state */}
+      {status === 'issued' && fbrInvoiceNumber && (
+        <div className="rounded-md bg-[var(--positive-bg)] border border-[var(--positive)]/20 p-4">
+          <div className="flex items-start gap-3">
+            <svg className="h-5 w-5 text-[var(--positive)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-[var(--positive)]">Invoice Issued by FBR</p>
+              <p className="mt-1 text-xs text-[var(--positive)]">
+                FBR Invoice Number:{' '}
+                <span className="font-mono font-bold">{fbrInvoiceNumber}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Failed state */}
+      {isFailed && (
+        <div className="rounded-md bg-[var(--error-bg)] border border-[var(--error)]/20 p-4">
+          <div className="flex items-start gap-3">
+            <svg className="h-5 w-5 text-[var(--error)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-[var(--error)]">FBR Submission Failed</p>
+              {error && <p className="mt-1 text-xs text-[var(--error)]">{error}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
