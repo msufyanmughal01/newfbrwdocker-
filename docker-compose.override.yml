@@ -1,0 +1,12 @@
+# Local development overrides — automatically applied by Docker Compose.
+# Replaces the production nginx.conf (which needs real SSL certs) with
+# an HTTP-only config safe for local use.
+# For production deployment, use: docker-compose -f docker-compose.yml up
+
+services:
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.local.conf:/etc/nginx/nginx.conf:ro
+    # Remove the SSL cert mount — not needed locally

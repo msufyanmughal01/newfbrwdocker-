@@ -3,9 +3,22 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { sql as sqlTag } from "drizzle-orm";
 import * as schema from "./schema";
 
-// Neon serverless HTTP driver — ideal for edge/serverless environments
-const sql = neon(process.env.DATABASE_URL!);
-export const db = drizzle(sql, { schema });
+// Neon serverless HTTP driver — lazy init so build-time imports don't require DATABASE_URL
+let _db: ReturnType<typeof drizzle<typeof schema>> | undefined;
+
+function getDb() {
+  if (!_db) {
+    const sql = neon(process.env.DATABASE_URL!);
+    _db = drizzle(sql, { schema });
+  }
+  return _db;
+}
+
+export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
+  get(_, prop) {
+    return getDb()[prop as keyof ReturnType<typeof getDb>];
+  },
+});
 
 /**
  * Wraps a database operation in a transaction with RLS tenant context set.
