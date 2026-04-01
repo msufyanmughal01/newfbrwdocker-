@@ -8,6 +8,7 @@ interface SidebarProps {
   onToggle: () => void;
   isMobileOpen: boolean;
   onMobileClose: () => void;
+  transitionsEnabled: boolean;
 }
 
 const navItems = [
@@ -211,7 +212,7 @@ function SidebarContent({
   );
 }
 
-export function Sidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, isMobileOpen, onMobileClose, transitionsEnabled }: SidebarProps) {
   return (
     <>
       {/* Mobile backdrop — renders behind the drawer, closes on click */}
@@ -224,10 +225,12 @@ export function Sidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }: Sideb
       )}
 
       {/* Desktop sidebar — sticky, expand/collapse toggle */}
+      {/* transition-all is withheld until after the initial viewport correction
+          to prevent the animated collapse flash seen in production builds. */}
       <aside
-        className={`hidden md:flex flex-col shrink-0 h-screen sticky top-0 border-r border-[var(--border)] transition-all duration-200 ease-in-out overflow-hidden ${
-          isOpen ? "w-60" : "w-14"
-        }`}
+        className={`hidden md:flex flex-col shrink-0 h-screen sticky top-0 border-r border-[var(--border)] overflow-hidden ${
+          transitionsEnabled ? "transition-all duration-200 ease-in-out" : ""
+        } ${isOpen ? "w-60" : "w-14"}`}
         style={{ background: "var(--bg-subtle)" }}
       >
         <SidebarContent isOpen={isOpen} onToggle={onToggle} />

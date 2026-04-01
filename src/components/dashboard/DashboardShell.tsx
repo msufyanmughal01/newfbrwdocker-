@@ -10,41 +10,37 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ userName, children }: DashboardShellProps) {
+  // SSR-safe default: server always renders with sidebar open (true).
+  // useEffect will correct this instantly (no transition) on the client.
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  // Transitions are disabled until after the initial viewport-based correction
+  // fires, preventing the animated collapse flash in production builds.
+  const [transitionsEnabled, setTransitionsEnabled] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const handleMobileMenuToggle = () => setIsMobileOpen((prev) => !prev);
   const handleMobileClose = () => setIsMobileOpen(false);
 
-  // Collapse sidebar on tablet (< 1024px); auto-close mobile drawer on resize to desktop
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 1024px)");
     const tabletOrMobileQuery = window.matchMedia("(max-width: 767px)");
 
+    // Immediately correct state to match the actual viewport — no animation yet.
+    setIsSidebarOpen(desktopQuery.matches);
+
+    // Enable transitions on the next frame, after the initial correction has
+    // been committed to the DOM. User-initiated toggles will animate from here.
+    requestAnimationFrame(() => setTransitionsEnabled(true));
+
     const handleDesktopChange = (e: MediaQueryListEvent) => {
-      if (e.matches) {
-        // Crossed into desktop — restore sidebar open state
-        setIsSidebarOpen(true);
-        setIsMobileOpen(false);
-      } else {
-        // Dropped below 1024px — collapse sidebar for tablet
-        setIsSidebarOpen(false);
-      }
+      setIsSidebarOpen(e.matches);
+      if (e.matches) setIsMobileOpen(false);
     };
 
     const handleMobileChange = (e: MediaQueryListEvent) => {
-      if (!e.matches) {
-        // Crossed above mobile breakpoint — close mobile drawer
-        setIsMobileOpen(false);
-      }
+      if (!e.matches) setIsMobileOpen(false);
     };
-
-    // Set initial state based on current viewport
-    if (!desktopQuery.matches) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsSidebarOpen(false);
-    }
 
     desktopQuery.addEventListener("change", handleDesktopChange);
     tabletOrMobileQuery.addEventListener("change", handleMobileChange);
@@ -62,6 +58,7 @@ export function DashboardShell({ userName, children }: DashboardShellProps) {
         onToggle={toggleSidebar}
         isMobileOpen={isMobileOpen}
         onMobileClose={handleMobileClose}
+        transitionsEnabled={transitionsEnabled}
       />
       <div className="flex flex-1 flex-col min-w-0">
         <Header userName={userName} onMobileMenuToggle={handleMobileMenuToggle} />
