@@ -117,6 +117,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
 && adduser --system --uid 1001 nextjs
 
+# Set correct permission for prerender cache (required by official Next.js Docker guide)
+RUN mkdir .next \
+&& chown nextjs:nodejs .next
+
 # Copy public assets
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
