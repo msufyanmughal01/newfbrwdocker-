@@ -11,7 +11,7 @@ export interface FBRLineItem {
   hsCode: string;
   productDescription: string;
   rate: string;
-  uom: string;
+  uoM: string; // FBR API v1.12 field name is 'uoM' (case-sensitive)
   quantity: number;
   totalValues: number;
   valueSalesExcludingST: number;
@@ -61,7 +61,7 @@ function mapLineItemToFBR(item: LineItem, _lineNumber: number): FBRLineItem {
     hsCode: item.hsCode,
     productDescription: item.productDescription,
     rate: item.rate,
-    uom: item.uom,
+    uoM: item.uom,
     quantity: item.quantity,
     totalValues: item.totalValues,
     valueSalesExcludingST: item.valueSalesExcludingST,
@@ -190,8 +190,8 @@ export function validateFBRPayload(payload: FBRInvoicePayload): {
       errors.push(`Item ${index + 1}: Sales value cannot be negative`);
     }
 
-    if (!item.rate.match(/^\d+%$/)) {
-      errors.push(`Item ${index + 1}: Tax rate must be in format "18%"`);
+    if (!item.rate || item.rate.trim() === '') {
+      errors.push(`Item ${index + 1}: Tax rate is required`);
     }
 
     if (!item.hsCode || item.hsCode.trim() === '') {

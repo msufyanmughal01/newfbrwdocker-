@@ -5,6 +5,19 @@ import { db } from '@/lib/db';
 import { businessProfiles } from '@/lib/db/schema/business-profiles';
 import { eq } from 'drizzle-orm';
 import { encrypt } from './encryption';
+import { encryptData, decryptData } from '@/lib/crypto/symmetric';
+import type { BusinessProfile } from '@/lib/db/schema/business-profiles';
+
+/** Decrypt sensitive fields before returning a profile to callers. */
+function decryptProfile(profile: BusinessProfile): Omit<BusinessProfile, 'fbrTokenEncrypted'> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { fbrTokenEncrypted: _omit, ...rest } = profile;
+  return {
+    ...rest,
+    ntnCnic: rest.ntnCnic ? decryptData(rest.ntnCnic) : rest.ntnCnic,
+    cnic: rest.cnic ? decryptData(rest.cnic) : rest.cnic,
+  };
+}
 
 export interface BusinessProfileInput {
   businessName?: string;
@@ -29,10 +42,7 @@ export async function getBusinessProfile(userId: string) {
 
   if (!profile) return null;
 
-  // Never return the encrypted token — only return the hint for display
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { fbrTokenEncrypted: _omit, ...safeProfile } = profile;
-  return safeProfile;
+  return decryptProfile(profile);
 }
 
 /**
@@ -48,7 +58,7 @@ export async function upsertBusinessProfile(
   };
 
   if (data.businessName !== undefined) updatePayload.businessName = data.businessName;
-  if (data.ntnCnic !== undefined) updatePayload.ntnCnic = data.ntnCnic;
+  if (data.ntnCnic !== undefined) updatePayload.ntnCnic = data.ntnCnic ? encryptData(data.ntnCnic) : null;
   if (data.province !== undefined) updatePayload.province = data.province;
   if (data.address !== undefined) updatePayload.address = data.address;
   if (data.logoPath !== undefined) updatePayload.logoPath = data.logoPath;

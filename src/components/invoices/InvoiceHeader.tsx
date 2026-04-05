@@ -14,6 +14,38 @@ interface InvoiceHeaderProps {
   form: UseFormReturn<InvoiceFormData>;
 }
 
+const inputBase = 'w-full px-3 py-2.5 border rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] placeholder:text-[var(--foreground-subtle)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/15 focus:border-[var(--primary)] transition-colors';
+const inputNormal = `${inputBase} border-[var(--border)]`;
+const inputError = `${inputBase} border-[var(--error)] focus:border-[var(--error)] focus:ring-[var(--error)]/15 bg-[var(--error-bg)]`;
+
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-4 mt-2">
+      <div className="h-4 w-0.5 rounded-full bg-[var(--primary)] flex-shrink-0" />
+      <span className="text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-widest">{label}</span>
+      <div className="flex-1 h-px bg-[var(--border)]" />
+    </div>
+  );
+}
+
+function FieldLabel({ htmlFor, children, required }: { htmlFor?: string; children: React.ReactNode; required?: boolean }) {
+  return (
+    <label htmlFor={htmlFor} className="block text-sm font-medium text-[var(--foreground)] mb-1.5">
+      {children}
+      {required && <span className="text-[var(--error)] ml-0.5">*</span>}
+    </label>
+  );
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-[var(--error)] text-xs mt-1.5">{message}</p>;
+}
+
+function FieldHint({ children }: { children: React.ReactNode }) {
+  return <p className="text-[var(--foreground-subtle)] text-xs mt-1.5">{children}</p>;
+}
+
 export function InvoiceHeader({ form }: InvoiceHeaderProps) {
   const {
     register,
@@ -25,7 +57,6 @@ export function InvoiceHeader({ form }: InvoiceHeaderProps) {
   const buyerRegistrationType = watch('buyerRegistrationType');
   const buyerNTNCNIC = watch('buyerNTNCNIC');
 
-  // T051: Live provinces from FBR API with static fallback
   const [provinces, setProvinces] = useState<string[]>([...FBR_PROVINCES]);
   useEffect(() => {
     fetch('/api/fbr/reference/provinces')
@@ -41,310 +72,198 @@ export function InvoiceHeader({ form }: InvoiceHeaderProps) {
       {/* Invoice Type and Date */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="invoiceType" className="block text-sm font-medium mb-1">
-            Invoice Type <span className="text-[var(--error)]">*</span>
-          </label>
+          <FieldLabel htmlFor="invoiceType" required>Invoice Type</FieldLabel>
           <select
             id="invoiceType"
             {...register('invoiceType')}
-            className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-              errors.invoiceType
-                ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                : 'border-[var(--border)] focus:ring-[var(--primary)]'
-            }`}
+            className={errors.invoiceType ? inputError : inputNormal}
           >
             <option value="Sale Invoice">Sale Invoice</option>
             <option value="Debit Note">Debit Note</option>
           </select>
-          {errors.invoiceType && (
-            <p className="text-[var(--error)] text-sm mt-1">{errors.invoiceType.message}</p>
-          )}
+          <FieldError message={errors.invoiceType?.message} />
         </div>
 
         <div>
-          <label htmlFor="invoiceDate" className="block text-sm font-medium mb-1">
-            Invoice Date <span className="text-[var(--error)]">*</span>
-          </label>
+          <FieldLabel htmlFor="invoiceDate" required>Invoice Date</FieldLabel>
           <input
             type="date"
             id="invoiceDate"
             {...register('invoiceDate')}
-            className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-              errors.invoiceDate
-                ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                : 'border-[var(--border)] focus:ring-[var(--primary)]'
-            }`}
+            className={errors.invoiceDate ? inputError : inputNormal}
           />
-          {errors.invoiceDate && (
-            <p className="text-[var(--error)] text-sm mt-1">{errors.invoiceDate.message}</p>
-          )}
+          <FieldError message={errors.invoiceDate?.message} />
         </div>
       </div>
 
       {/* Debit Note Reference (conditional) */}
       {invoiceType === 'Debit Note' && (
         <div>
-          <label htmlFor="invoiceRefNo" className="block text-sm font-medium mb-1">
-            Invoice Reference Number <span className="text-[var(--error)]">*</span>
-          </label>
+          <FieldLabel htmlFor="invoiceRefNo" required>Invoice Reference Number</FieldLabel>
           <input
             type="text"
             id="invoiceRefNo"
             {...register('invoiceRefNo')}
             placeholder="22 or 28 digits"
             maxLength={28}
-            className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] placeholder:text-[var(--foreground-subtle)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-              errors.invoiceRefNo
-                ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                : 'border-[var(--border)] focus:ring-[var(--primary)]'
-            }`}
+            className={`${errors.invoiceRefNo ? inputError : inputNormal} font-mono`}
           />
-          {errors.invoiceRefNo ? (
-            <p className="text-[var(--error)] text-sm mt-1">
-              <span className="inline-block mr-1">❌</span>
-              {errors.invoiceRefNo.message}
-            </p>
-          ) : (
-            <p className="text-[var(--foreground-muted)] text-xs mt-1">
-              ℹ️ Enter 22 digits (for NTN-based invoices) or 28 digits (for CNIC-based invoices)
-            </p>
-          )}
+          {errors.invoiceRefNo
+            ? <FieldError message={errors.invoiceRefNo.message} />
+            : <FieldHint>Enter 22 digits (NTN-based) or 28 digits (CNIC-based)</FieldHint>
+          }
         </div>
       )}
 
-      {/* Seller Information */}
-      <div className="border-t border-[var(--border)] pt-4">
-        <h3 className="text-lg font-semibold mb-4">Seller Information</h3>
+      {/* ── Seller Information ─────────────────────────────────── */}
+      <div>
+        <SectionHeader label="Seller Information" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="sellerNTNCNIC" className="block text-sm font-medium mb-1">
-              Seller NTN/CNIC <span className="text-[var(--error)]">*</span>
-            </label>
+            <FieldLabel htmlFor="sellerNTNCNIC" required>NTN / CNIC</FieldLabel>
             <input
               type="text"
               id="sellerNTNCNIC"
               {...register('sellerNTNCNIC')}
               placeholder="7-digit NTN or 13-digit CNIC"
               maxLength={13}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] placeholder:text-[var(--foreground-subtle)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-                errors.sellerNTNCNIC
-                  ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                  : 'border-[var(--border)] focus:ring-[var(--primary)]'
-              }`}
+              className={`${errors.sellerNTNCNIC ? inputError : inputNormal} font-mono`}
             />
-            {errors.sellerNTNCNIC ? (
-              <p className="text-[var(--error)] text-sm mt-1">
-                <span className="inline-block mr-1">❌</span>
-                {errors.sellerNTNCNIC.message}
-              </p>
-            ) : (
-              <p className="text-[var(--foreground-muted)] text-xs mt-1">
-                ℹ️ Enter 7-digit NTN (e.g., 0786909) or 13-digit CNIC (e.g., 1234567890123)
-              </p>
-            )}
+            {errors.sellerNTNCNIC
+              ? <FieldError message={errors.sellerNTNCNIC.message} />
+              : <FieldHint>e.g. 0786909 (NTN) or 1234567890123 (CNIC)</FieldHint>
+            }
           </div>
 
           <div>
-            <label htmlFor="sellerBusinessName" className="block text-sm font-medium mb-1">
-              Business Name <span className="text-[var(--error)]">*</span>
-            </label>
+            <FieldLabel htmlFor="sellerBusinessName" required>Business Name</FieldLabel>
             <input
               type="text"
               id="sellerBusinessName"
               {...register('sellerBusinessName')}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-                errors.sellerBusinessName
-                  ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                  : 'border-[var(--border)] focus:ring-[var(--primary)]'
-              }`}
+              className={errors.sellerBusinessName ? inputError : inputNormal}
             />
-            {errors.sellerBusinessName && (
-              <p className="text-[var(--error)] text-sm mt-1">{errors.sellerBusinessName.message}</p>
-            )}
+            <FieldError message={errors.sellerBusinessName?.message} />
           </div>
 
           <div>
-            <label htmlFor="sellerProvince" className="block text-sm font-medium mb-1">
-              Province <span className="text-[var(--error)]">*</span>
-            </label>
+            <FieldLabel htmlFor="sellerProvince" required>Province</FieldLabel>
             <select
               id="sellerProvince"
               {...register('sellerProvince')}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-                errors.sellerProvince
-                  ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                  : 'border-[var(--border)] focus:ring-[var(--primary)]'
-              }`}
+              className={errors.sellerProvince ? inputError : inputNormal}
             >
               <option value="">Select Province</option>
               {provinces.map((province) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
+                <option key={province} value={province}>{province}</option>
               ))}
             </select>
-            {errors.sellerProvince && (
-              <p className="text-[var(--error)] text-sm mt-1">{errors.sellerProvince.message}</p>
-            )}
+            <FieldError message={errors.sellerProvince?.message} />
           </div>
 
           <div>
-            <label htmlFor="sellerAddress" className="block text-sm font-medium mb-1">
-              Address <span className="text-[var(--error)]">*</span>
-            </label>
+            <FieldLabel htmlFor="sellerAddress" required>Address</FieldLabel>
             <input
               type="text"
               id="sellerAddress"
               {...register('sellerAddress')}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-                errors.sellerAddress
-                  ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                  : 'border-[var(--border)] focus:ring-[var(--primary)]'
-              }`}
+              className={errors.sellerAddress ? inputError : inputNormal}
             />
-            {errors.sellerAddress && (
-              <p className="text-[var(--error)] text-sm mt-1">{errors.sellerAddress.message}</p>
-            )}
+            <FieldError message={errors.sellerAddress?.message} />
           </div>
         </div>
       </div>
 
-      {/* Buyer Information */}
-      <div className="border-t border-[var(--border)] pt-4">
-        <h3 className="text-lg font-semibold mb-4">Buyer Information</h3>
+      {/* ── Buyer Information ──────────────────────────────────── */}
+      <div>
+        <SectionHeader label="Buyer Information" />
 
-        {/* T019/T021: Saved client selector — full-width, at top of section for discoverability */}
+        {/* Quick-fill from saved clients */}
         <div className="mb-4">
-          <p className="text-sm font-medium mb-2">Quick-fill from saved clients</p>
+          <FieldLabel>Quick-fill from saved clients</FieldLabel>
           <ClientSearch form={form} />
         </div>
 
+        {/* Registration type */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
-            Registration Type <span className="text-[var(--error)]">*</span>
-          </label>
-          <div className="flex gap-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="Registered"
-                {...register('buyerRegistrationType')}
-                className="mr-2"
-              />
-              Registered
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="Unregistered"
-                {...register('buyerRegistrationType')}
-                className="mr-2"
-              />
-              Unregistered
-            </label>
+          <FieldLabel required>Registration Type</FieldLabel>
+          <div className="flex gap-6">
+            {(['Registered', 'Unregistered'] as const).map((type) => (
+              <label key={type} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  value={type}
+                  {...register('buyerRegistrationType')}
+                  className="w-4 h-4 accent-[var(--primary)]"
+                />
+                <span className="text-sm text-[var(--foreground)]">{type}</span>
+              </label>
+            ))}
           </div>
-          {errors.buyerRegistrationType && (
-            <p className="text-[var(--error)] text-sm mt-1">{errors.buyerRegistrationType.message}</p>
-          )}
+          <FieldError message={errors.buyerRegistrationType?.message} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="buyerNTNCNIC" className="block text-sm font-medium mb-1">
-              Buyer NTN/CNIC {buyerRegistrationType === 'Registered' && <span className="text-[var(--error)]">*</span>}
-            </label>
+            <FieldLabel htmlFor="buyerNTNCNIC" required={buyerRegistrationType === 'Registered'}>
+              NTN / CNIC
+            </FieldLabel>
             <input
               type="text"
               id="buyerNTNCNIC"
               {...register('buyerNTNCNIC')}
               placeholder="7-digit NTN or 13-digit CNIC"
               maxLength={13}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] placeholder:text-[var(--foreground-subtle)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-                errors.buyerNTNCNIC
-                  ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                  : 'border-[var(--border)] focus:ring-[var(--primary)]'
-              }`}
+              className={`${errors.buyerNTNCNIC ? inputError : inputNormal} font-mono`}
             />
-            {errors.buyerNTNCNIC ? (
-              <p className="text-[var(--error)] text-sm mt-1">
-                <span className="inline-block mr-1">❌</span>
-                {errors.buyerNTNCNIC.message}
-              </p>
-            ) : null}
-            {/* T038: NTN Verifier badge */}
+            <FieldError message={errors.buyerNTNCNIC?.message} />
             {buyerNTNCNIC && buyerNTNCNIC.length >= 7 && (
               <NTNVerifier form={form} ntnCnic={buyerNTNCNIC} />
             )}
-            {!errors.buyerNTNCNIC && buyerRegistrationType === 'Registered' ? (
-              <p className="text-[var(--foreground-muted)] text-xs mt-1">
-                ℹ️ Enter 7-digit NTN (e.g., 0786909) or 13-digit CNIC (e.g., 1234567890123)
-              </p>
-            ) : (
-              <p className="text-[var(--foreground-subtle)] text-xs mt-1">
-                ℹ️ Optional for unregistered buyers
-              </p>
+            {!errors.buyerNTNCNIC && (
+              <FieldHint>
+                {buyerRegistrationType === 'Registered'
+                  ? 'e.g. 0786909 (NTN) or 1234567890123 (CNIC)'
+                  : 'Optional for unregistered buyers'}
+              </FieldHint>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Business Name
-            </label>
-            {/* T020: ClientSearch moved to top of section — removed from here */}
-            {/* FBR Buyer Registry search — T023: unchanged, still in original position */}
-            <div>
-              <p className="text-xs text-[var(--foreground-muted)] mb-1">Or search FBR registry:</p>
+            <FieldLabel>Business Name</FieldLabel>
+            <div className="space-y-2">
+              <p className="text-xs text-[var(--foreground-muted)]">Search FBR registry:</p>
               <FBRErrorBoundary>
                 <BuyerSearch form={form} />
               </FBRErrorBoundary>
             </div>
-            {errors.buyerBusinessName && (
-              <p className="text-[var(--error)] text-sm mt-1">{errors.buyerBusinessName.message}</p>
-            )}
+            <FieldError message={errors.buyerBusinessName?.message} />
           </div>
 
           <div>
-            <label htmlFor="buyerProvince" className="block text-sm font-medium mb-1">
-              Province
-            </label>
+            <FieldLabel htmlFor="buyerProvince">Province</FieldLabel>
             <select
               id="buyerProvince"
               {...register('buyerProvince')}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-                errors.buyerProvince
-                  ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                  : 'border-[var(--border)] focus:ring-[var(--primary)]'
-              }`}
+              className={errors.buyerProvince ? inputError : inputNormal}
             >
               <option value="">Select Province</option>
               {provinces.map((province) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
+                <option key={province} value={province}>{province}</option>
               ))}
             </select>
-            {errors.buyerProvince && (
-              <p className="text-[var(--error)] text-sm mt-1">{errors.buyerProvince.message}</p>
-            )}
+            <FieldError message={errors.buyerProvince?.message} />
           </div>
 
           <div>
-            <label htmlFor="buyerAddress" className="block text-sm font-medium mb-1">
-              Address
-            </label>
+            <FieldLabel htmlFor="buyerAddress">Address</FieldLabel>
             <input
               type="text"
               id="buyerAddress"
               {...register('buyerAddress')}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 bg-[var(--surface-2)] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] focus:ring-[var(--primary)]/20 transition-colors ${
-                errors.buyerAddress
-                  ? 'border-[var(--error)] focus:ring-[var(--error)] bg-[var(--error-bg)]'
-                  : 'border-[var(--border)] focus:ring-[var(--primary)]'
-              }`}
+              className={errors.buyerAddress ? inputError : inputNormal}
             />
-            {errors.buyerAddress && (
-              <p className="text-[var(--error)] text-sm mt-1">{errors.buyerAddress.message}</p>
-            )}
+            <FieldError message={errors.buyerAddress?.message} />
           </div>
         </div>
       </div>

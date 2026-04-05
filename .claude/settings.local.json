@@ -44,7 +44,8 @@
       "Bash(gh auth:*)",
       "Bash(find E:FILESSnewfbrwdocker- -maxdepth 3 -type f \\\\\\(-name package.json -o -name docker-compose*.yml -o -name *.config.js -o -name *.config.ts \\\\\\))",
       "mcp__Claude_Preview__preview_start",
-      "Bash(python -m json.tool)"
+      "Bash(python -m json.tool)",
+      "Bash(powershell -Command \"netstat -ano | Select-String '':51461''\")"
     ]
   }
 }

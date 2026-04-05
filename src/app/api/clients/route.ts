@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { listClients, createClient } from '@/lib/clients/client-service';
 import { z } from 'zod';
+import { withDecryption } from '@/lib/crypto/with-decryption';
 
 const createSchema = z.object({
   businessName: z.string().min(1, 'Business name is required').max(255),
@@ -36,17 +37,10 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ clients: result });
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withDecryption(async (request: NextRequest, body: unknown) => {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
   const parsed = createSchema.safeParse(body);
@@ -59,4 +53,4 @@ export async function POST(request: NextRequest) {
 
   const client = await createClient(session.user.id, parsed.data);
   return NextResponse.json({ success: true, client }, { status: 201 });
-}
+});

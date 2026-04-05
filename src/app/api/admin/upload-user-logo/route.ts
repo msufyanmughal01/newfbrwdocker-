@@ -2,6 +2,7 @@
 // Uploads a logo for any user (admin only)
 
 import { NextRequest, NextResponse } from 'next/server';
+import { validateAdminRequest } from '../_admin-auth';
 import { db } from '@/lib/db';
 import { businessProfiles } from '@/lib/db/schema/business-profiles';
 import { user as userTable } from '@/lib/db/schema/auth';
@@ -17,6 +18,10 @@ const ALLOWED_TYPES: Record<string, string> = {
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
 export async function POST(request: NextRequest) {
+  if (!validateAdminRequest(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -24,14 +29,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
-  const adminKey = formData.get('adminKey');
   const userId = formData.get('userId');
   const file = formData.get('logo');
-
-  const validKey = process.env.ADMIN_SECRET_KEY;
-  if (!validKey || adminKey !== validKey) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   if (!userId || typeof userId !== 'string') {
     return NextResponse.json({ error: 'userId is required' }, { status: 400 });
@@ -49,7 +48,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid file type. Allowed: jpg, png, webp, svg' }, { status: 400 });
   }
 
-  // Verify user exists
   const users = await db.select({ id: userTable.id }).from(userTable).where(eq(userTable.id, userId)).limit(1);
   if (!users.length) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });

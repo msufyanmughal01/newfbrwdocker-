@@ -1,26 +1,18 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { user as userTable } from "@/lib/db/schema";
 import { businessProfiles } from "@/lib/db/schema/business-profiles";
 import { desc, eq } from "drizzle-orm";
 import { AdminDashboardClient } from "./admin-client";
 
-interface Props {
-  searchParams: Promise<{ key?: string }>;
-}
-
-export default async function AdminPage({ searchParams }: Props) {
-  const { key } = await searchParams;
+export default async function AdminPage() {
+  const cookieStore = await cookies();
+  const adminSession = cookieStore.get("admin_session");
   const adminKey = process.env.ADMIN_SECRET_KEY;
 
-  if (!adminKey || key !== adminKey) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#000" }}>
-        <div style={{ textAlign: "center" }}>
-          <h1 style={{ fontSize: "72px", fontWeight: "bold", margin: 0, color: "#1a1a1a" }}>404</h1>
-          <p style={{ color: "#333", marginTop: "8px" }}>Page not found</p>
-        </div>
-      </div>
-    );
+  if (!adminKey || adminSession?.value !== adminKey) {
+    redirect("/admin/login");
   }
 
   const rows = await db
@@ -52,5 +44,6 @@ export default async function AdminPage({ searchParams }: Props) {
     .leftJoin(businessProfiles, eq(userTable.id, businessProfiles.userId))
     .orderBy(desc(userTable.createdAt));
 
-  return <AdminDashboardClient users={rows} adminKey={key} />;
+  // adminKey is NOT passed to the client — cookie auth handles API calls
+  return <AdminDashboardClient users={rows} />;
 }

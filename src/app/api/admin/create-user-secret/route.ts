@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { validateAdminRequest } from "../_admin-auth";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
@@ -6,9 +7,13 @@ import { user as userTable } from "@/lib/db/schema/auth";
 import { businessProfiles } from "@/lib/db/schema/business-profiles";
 
 export async function POST(req: NextRequest) {
+  if (!validateAdminRequest(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const {
-    name, email, password, adminKey,
+    name, email, password,
     phone, businessName, ntnCnic,
     fatherName, cnic, province, address, city, postalCode,
     dateOfBirth, gender, emergencyContact, notes,
@@ -16,7 +21,6 @@ export async function POST(req: NextRequest) {
     name: string;
     email: string;
     password: string;
-    adminKey: string;
     phone?: string;
     businessName?: string;
     ntnCnic?: string;
@@ -32,10 +36,6 @@ export async function POST(req: NextRequest) {
     notes?: string;
   };
 
-  const validKey = process.env.ADMIN_SECRET_KEY;
-  if (!validKey || adminKey !== validKey) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
   if (!name?.trim() || !email?.trim()) {
     return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
   }
@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
     // non-fatal
   }
 
-  // Save all profile details to business_profiles
   const profileData = {
     businessName: businessName?.trim() || null,
     ntnCnic: ntnCnic?.trim() || null,
@@ -92,7 +91,7 @@ export async function POST(req: NextRequest) {
     notes: notes?.trim() || null,
   };
 
-  const hasData = Object.values(profileData).some(v => v !== null);
+  const hasData = Object.values(profileData).some((v) => v !== null);
   if (hasData) {
     try {
       await db

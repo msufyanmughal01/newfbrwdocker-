@@ -14,7 +14,7 @@ export const clients = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
 
     businessName: varchar('business_name', { length: 255 }).notNull(),
-    ntnCnic: varchar('ntn_cnic', { length: 13 }),
+    ntnCnic: text('ntn_cnic'), // stored encrypted — AES-256-GCM values are ~80+ chars
     province: varchar('province', { length: 100 }),
     address: text('address'),
     registrationType: varchar('registration_type', { length: 50 }), // 'Registered' | 'Unregistered'

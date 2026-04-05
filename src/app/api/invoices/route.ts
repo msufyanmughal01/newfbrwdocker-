@@ -7,15 +7,18 @@ import { invoiceSchema } from '@/lib/invoices/validation';
 import { calculateInvoiceTotals } from '@/lib/invoices/calculations';
 import { mapToFBRFormat, validateFBRPayload } from '@/lib/invoices/fbr-mapping';
 import { ZodError } from 'zod';
+import { withDecryption } from '@/lib/crypto/with-decryption';
+import { encryptData, decryptData } from '@/lib/crypto/symmetric';
 
 /**
  * POST /api/invoices
- * Creates a new FBR-compliant invoice with line items
+ * Creates a new FBR-compliant invoice with line items.
+ * Accepts both plain and ECDH-encrypted bodies (X-Encrypted: 1).
  *
  * Request body: InvoiceFormData
  * Response: { success: boolean, invoiceId?: string, fbrPayload?: object }
  */
-export async function POST(request: NextRequest) {
+export const POST = withDecryption(async (request: NextRequest, body: unknown) => {
   try {
     // 1. Authenticate user
     const session = await auth.api.getSession({ headers: request.headers });
@@ -30,10 +33,9 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id;
 
-    // 2. Parse and validate request body
-    const body = await request.json();
+    // 2. body already parsed (and decrypted if X-Encrypted: 1) by withDecryption HOC
 
-    const validated = invoiceSchema.parse(body);
+    const validated = invoiceSchema.parse(body as Record<string, unknown>);
 
     // 3. Calculate totals
     const calculations = calculateInvoiceTotals(validated.items);
@@ -58,11 +60,11 @@ export async function POST(request: NextRequest) {
         invoiceType: validated.invoiceType,
         invoiceDate: validated.invoiceDate,
         invoiceRefNo: validated.invoiceRefNo || null,
-        sellerNTNCNIC: validated.sellerNTNCNIC,
+        sellerNTNCNIC: encryptData(validated.sellerNTNCNIC),
         sellerBusinessName: validated.sellerBusinessName,
         sellerProvince: validated.sellerProvince,
         sellerAddress: validated.sellerAddress,
-        buyerNTNCNIC: validated.buyerNTNCNIC || null,
+        buyerNTNCNIC: validated.buyerNTNCNIC ? encryptData(validated.buyerNTNCNIC) : null,
         buyerBusinessName: validated.buyerBusinessName,
         buyerProvince: validated.buyerProvince,
         buyerAddress: validated.buyerAddress,
@@ -136,7 +138,7 @@ export async function POST(request: NextRequest) {
       errorType: error instanceof Error ? error.name : typeof error,
     }, { status: 500 });
   }
-}
+});
 
 /**
  * GET /api/invoices
@@ -162,8 +164,14 @@ export async function GET(request: NextRequest) {
       limit: 100,
     });
 
+    const decrypted = invoiceList.map((inv) => ({
+      ...inv,
+      sellerNTNCNIC: decryptData(inv.sellerNTNCNIC),
+      buyerNTNCNIC: inv.buyerNTNCNIC ? decryptData(inv.buyerNTNCNIC) : inv.buyerNTNCNIC,
+    }));
+
     return NextResponse.json({
-      invoices: invoiceList,
+      invoices: decrypted,
     }, { status: 200 });
 
   } catch (error) {

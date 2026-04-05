@@ -42,13 +42,13 @@ export const invoices = pgTable(
   invoiceDate: date('invoice_date').notNull(), // YYYY-MM-DD format
 
   // Seller information
-  sellerNTNCNIC: varchar('seller_ntn_cnic', { length: 13 }).notNull(), // 7 digits (NTN) or 13 digits (CNIC)
+  sellerNTNCNIC: text('seller_ntn_cnic').notNull(), // NTN or CNIC — stored encrypted
   sellerBusinessName: varchar('seller_business_name', { length: 255 }).notNull(),
   sellerProvince: varchar('seller_province', { length: 100 }).notNull(),
   sellerAddress: text('seller_address').notNull(),
 
   // Buyer information
-  buyerNTNCNIC: varchar('buyer_ntn_cnic', { length: 13 }), // Optional if unregistered
+  buyerNTNCNIC: text('buyer_ntn_cnic'), // NTN or CNIC — stored encrypted, optional if unregistered
   buyerBusinessName: varchar('buyer_business_name', { length: 255 }).notNull(),
   buyerProvince: varchar('buyer_province', { length: 100 }).notNull(),
   buyerAddress: text('buyer_address').notNull(),

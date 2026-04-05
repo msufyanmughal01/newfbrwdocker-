@@ -1,28 +1,51 @@
-version: "3.9"
+# ─────────────────────────────────────────────────────────────────────────────
+# Production Docker Compose
+#
+# Services:
+#   app      — Next.js (internal only; nginx is the sole entry-point)
+#   nginx    — Reverse proxy + TLS termination
+#   certbot  — Let's Encrypt renewal daemon [profile: production]
+#
+# Local dev: docker compose up
+#   docker-compose.override.yml is applied automatically, swapping in
+#   nginx.local.conf (HTTP-only, no SSL required).
+#
+# Production: docker compose -f docker-compose.yml --profile production up -d
+#   Uses this file only; certbot service starts and manages certs.
+#
+# One-time SSL setup (production):
+#   1. Replace YOUR_DOMAIN in nginx.conf with your domain
+#   2. ./scripts/init-letsencrypt.sh yourdomain.com admin@yourdomain.com
+# ─────────────────────────────────────────────────────────────────────────────
 
 services:
+
+  # ── Next.js application ────────────────────────────────────────────────────
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: taxdigital-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # Not exposed to host — only nginx needs port 3000 internally
+    expose:
+      - "3000"
     env_file:
       - .env.production
     environment:
       - NODE_ENV=production
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-https://localhost}
     networks:
       - taxdigital-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      # node:slim does NOT include curl — use Node.js built-in fetch instead
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)throw r.status;process.exit(0)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 90s
 
+  # ── Nginx reverse proxy ────────────────────────────────────────────────────
   nginx:
     image: nginx:alpine
     container_name: taxdigital-nginx
@@ -32,12 +55,50 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Certificates issued by certbot (read-only — certbot writes, nginx reads)
+      - certbot-etc:/etc/letsencrypt:ro
+      # Certbot ACME webroot challenge directory
+      - certbot-www:/var/www/certbot:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     networks:
       - taxdigital-net
 
+  # ── Let's Encrypt certificate manager ─────────────────────────────────────
+  # Only started in production via --profile production
+  # Runs as a daemon: checks for renewal every 12 hours.
+  # After renewal, reloads nginx via Docker socket (docker exec).
+  #
+  # Docker socket security note:
+  #   The socket mount gives this container the ability to exec into other
+  #   containers. This is a deliberate trade-off for zero-downtime cert reload.
+  #   Mitigate by running certbot as a dedicated low-privilege user and using
+  #   a socket proxy (e.g. tecnativa/docker-socket-proxy) in high-security envs.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: taxdigital-certbot
+    restart: unless-stopped
+    profiles:
+      - production
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+      # Required so the deploy hook can exec into the nginx container
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/certbot-entrypoint.sh:/usr/local/bin/certbot-entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/certbot-entrypoint.sh"]
+    depends_on:
+      - nginx
+
+# ── Named volumes ──────────────────────────────────────────────────────────────
+# certbot-etc: /etc/letsencrypt — certificates, renewal config, DH params
+# certbot-www: /var/www/certbot — ACME http-01 challenge files served by nginx
+volumes:
+  certbot-etc:
+  certbot-www:
+
+# ── Networks ───────────────────────────────────────────────────────────────────
 networks:
   taxdigital-net:
     driver: bridge

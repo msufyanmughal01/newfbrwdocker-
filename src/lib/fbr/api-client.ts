@@ -49,7 +49,11 @@ async function resolveToken(userId?: string): Promise<string> {
       if (encrypted) {
         const expiresAt = rows[0]?.fbrTokenExpiresAt;
         if (expiresAt && expiresAt < new Date()) {
-          console.warn(`[FBR] Token expired at ${expiresAt.toISOString()} for user ${userId}. Token may still work — refresh is P1.`);
+          // FBR tokens have a 5-year validity. Once expired, FBR returns 401.
+          // Surface this as an actionable error so the user can update their token.
+          const err = new Error('FBR_TOKEN_EXPIRED') as Error & { code: string };
+          err.code = 'FBR_TOKEN_EXPIRED';
+          throw err;
         }
         return decrypt(encrypted);
       }
@@ -231,11 +235,12 @@ export async function fbrSTATL(regno: string, date: string): Promise<unknown> {
   );
 }
 
-export async function fbrGetRegType(registrationNo: string): Promise<unknown> {
+export async function fbrGetRegType(registrationNo: string, userId?: string): Promise<unknown> {
   return fbrFetch(
     '/dist/v1/Get_Reg_Type',
     { method: 'POST', body: JSON.stringify({ Registration_No: registrationNo }) },
-    10_000
+    10_000,
+    userId
   );
 }
 

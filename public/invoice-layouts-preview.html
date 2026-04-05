@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TaxDigital Invoice Preview</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #e8edf5; min-height: 100vh; padding: 32px 16px; }
+
+/* ─── Wrapper ─── */
+.invoice {
+  max-width: 860px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 48px rgba(79,70,229,.13), 0 2px 8px rgba(0,0,0,.06);
+  border: 1px solid #e2e5ee;
+}
+
+/* ─── GRADIENT ACCENT BAR ─── */
+.accent-bar {
+  height: 5px;
+  background: linear-gradient(90deg, #4f46e5 0%, #818cf8 50%, #c084fc 100%);
+}
+
+/* ─── HEADER (white + glass feel) ─── */
+.inv-header {
+  background: #ffffff;
+  padding: 28px 36px 20px;
+  border-bottom: 1px solid #e2e5ee;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+/* Business logo area */
+.biz-logo-area { display: flex; align-items: center; gap: 14px; }
+.biz-logo {
+  width: 60px; height: 60px;
+  border-radius: 12px;
+  border: 1px solid #e2e5ee;
+  background: #f5f6fa;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #9ca3af; text-align: center;
+  overflow: hidden;
+}
+.biz-logo img { width: 100%; height: 100%; object-fit: contain; }
+.biz-info { }
+.biz-name { font-size: 17px; font-weight: 800; color: #0f1423; letter-spacing: -0.3px; }
+.biz-ntn { font-size: 11px; color: #6b7280; font-family: monospace; margin-top: 2px; }
+.biz-address { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+
+/* Center title */
+.inv-title-block { text-align: center; flex: 1; }
+.inv-type-badge {
+  display: inline-block;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  padding: 5px 14px; border-radius: 999px;
+  border: 1px solid #c7d2fe;
+}
+.inv-date { font-size: 12px; color: #9ca3af; margin-top: 6px; }
+
+/* Right: TaxDigital + FBR */
+.header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.taxdigital-brand { font-size: 18px; font-weight: 900; color: #0f1423; letter-spacing: -0.5px; }
+.taxdigital-brand span { color: #4f46e5; }
+.taxdigital-tagline { font-size: 9px; color: #9ca3af; letter-spacing: 0.5px; }
+.fbr-badge-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #f8fafc; border: 1px solid #e2e5ee;
+  border-radius: 8px; padding: 5px 10px;
+}
+.fbr-icon {
+  width: 24px; height: 24px; border-radius: 5px;
+  background: linear-gradient(135deg, #064e3b, #0d9488);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; font-weight: 800; color: white;
+}
+.fbr-label-text .fbr-main { font-size: 10px; font-weight: 700; color: #374151; display: block; }
+.fbr-label-text .fbr-sub { font-size: 8px; color: #9ca3af; display: block; }
+
+/* ─── FBR NUMBER BAND ─── */
+.fbr-band {
+  background: #fafbff;
+  border-bottom: 1px solid #e0e7ff;
+  padding: 14px 36px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.fbr-band-left .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #6366f1; }
+.fbr-band-left .val { font-family: monospace; font-size: 15px; font-weight: 700; color: #312e81; margin-top: 3px; }
+.fbr-band-right { display: flex; align-items: center; gap: 12px; }
+.issued-pill {
+  background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 999px;
+}
+.issued-pill.draft { background: #fefce8; border-color: #fde68a; color: #92400e; }
+.qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.qr-box {
+  width: 60px; height: 60px;
+  background: repeating-conic-gradient(#312e81 0% 25%, #fff 0% 50%) 0 0 / 6px 6px;
+  border: 2px solid #312e81; border-radius: 4px; padding: 3px;
+}
+.qr-box-inner { width: 100%; height: 100%; background: repeating-conic-gradient(#111 0% 25%, #fff 0% 50%) 0 0 / 4px 4px; }
+.qr-wrap small { font-size: 8px; color: #a5b4fc; }
+
+/* ─── BODY ─── */
+.inv-body { padding: 24px 36px; }
+
+/* Meta chips */
+.meta-chips { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+.chip {
+  background: #f8fafc; border: 1px solid #e2e5ee;
+  border-radius: 10px; padding: 8px 14px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.chip .chip-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; }
+.chip .chip-val { font-size: 13px; font-weight: 600; color: #1e293b; }
+
+/* Parties — glass/white combo */
+.parties { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+.party-card {
+  border-radius: 14px;
+  border: 1px solid #e2e5ee;
+  overflow: hidden;
+  background: white;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.party-head {
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.party-head.seller { background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%); color: #4f46e5; }
+.party-head.buyer  { background: linear-gradient(135deg, #f8faff 0%, #f0f9ff 100%); color: #0284c7; }
+.dot { width: 7px; height: 7px; border-radius: 50%; }
+.seller .dot { background: #4f46e5; }
+.buyer  .dot { background: #0284c7; }
+.party-body { padding: 14px 16px; }
+.party-body h3 { font-size: 14px; font-weight: 700; color: #0f1423; margin-bottom: 5px; }
+.party-body p { font-size: 11px; color: #6b7280; line-height: 1.65; }
+.party-body .ntn { font-family: monospace; font-size: 11px; color: #0f1423; font-weight: 600; }
+.reg-badge {
+  display: inline-block; margin-top: 6px;
+  background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8;
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 2px 9px; border-radius: 999px;
+}
+
+/* Items table */
+.section-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #9ca3af; margin-bottom: 10px; }
+.items-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 22px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e5ee; }
+.items-table thead tr { background: linear-gradient(135deg, #4f46e5, #6366f1); }
+.items-table thead th {
+  padding: 10px 10px; text-align: left;
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  color: rgba(255,255,255,.8);
+}
+.items-table tbody tr { border-bottom: 1px solid #f1f5f9; }
+.items-table tbody tr:last-child { border-bottom: none; }
+.items-table tbody tr:nth-child(even) { background: #fafbff; }
+.items-table tbody td { padding: 10px 10px; color: #334155; }
+.text-right { text-align: right; }
+.mono { font-family: monospace; font-size: 11px; }
+.total-cell { font-weight: 700; color: #4f46e5; }
+
+/* Totals */
+.bottom-row { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+.totals-box { width: 280px; }
+.totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #6b7280; border-bottom: 1px solid #f1f5f9; }
+.totals-row:last-child { border: none; }
+.totals-row.grand {
+  margin-top: 8px; padding: 12px 16px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border-radius: 12px; font-weight: 800; font-size: 16px; color: white;
+}
+
+/* Footer */
+.inv-footer {
+  background: #f8fafc; border-top: 1px solid #e2e5ee;
+  padding: 12px 36px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; color: #9ca3af;
+}
+.footer-brand { font-weight: 700; color: #6b7280; }
+.footer-brand span { color: #4f46e5; }
+</style>
+</head>
+<body>
+
+<div class="invoice">
+  <div class="accent-bar"></div>
+
+  <!-- HEADER -->
+  <div class="inv-header">
+    <!-- Business logo + name (left) -->
+    <div class="biz-logo-area">
+      <div class="biz-logo">
+        <!-- Real: <img src={logoPath} /> — showing placeholder -->
+        <span>LOGO</span>
+      </div>
+      <div class="biz-info">
+        <div class="biz-name">Tech Solutions (Pvt) Ltd.</div>
+        <div class="biz-ntn">NTN: 1234567</div>
+        <div class="biz-address">123 Main Blvd, Gulberg III, Lahore · Punjab</div>
+      </div>
+    </div>
+
+    <!-- Invoice type (center) -->
+    <div class="inv-title-block">
+      <div class="inv-type-badge">Sales Tax Invoice</div>
+      <div class="inv-date">December 1, 2024</div>
+    </div>
+
+    <!-- TaxDigital + FBR (right) -->
+    <div class="header-right">
+      <div>
+        <div class="taxdigital-brand">Tax<span>Digital</span></div>
+        <div class="taxdigital-tagline">Intelligent Tax Management</div>
+      </div>
+      <div class="fbr-badge-pill">
+        <div class="fbr-icon">FBR</div>
+        <div class="fbr-label-text">
+          <span class="fbr-main">Digital Invoicing</span>
+          <span class="fbr-sub">v1.12 · Pakistan</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FBR NUMBER BAND -->
+  <div class="fbr-band">
+    <div class="fbr-band-left">
+      <div class="lbl">FBR Invoice Number</div>
+      <div class="val">INV-7000007DI1747119701593</div>
+    </div>
+    <div class="fbr-band-right">
+      <span class="issued-pill">✓ Issued</span>
+      <div class="qr-wrap">
+        <div class="qr-box"><div class="qr-box-inner"></div></div>
+        <small>Scan to verify</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="inv-body">
+
+    <div class="meta-chips">
+      <div class="chip"><span class="chip-lbl">Invoice Date</span><span class="chip-val">2024-12-01</span></div>
+      <div class="chip"><span class="chip-lbl">Invoice Type</span><span class="chip-val">Sales Tax Invoice</span></div>
+      <div class="chip"><span class="chip-lbl">Issued At</span><span class="chip-val">01/12/2024 14:35</span></div>
+      <div class="chip"><span class="chip-lbl">Reference No.</span><span class="chip-val">REF-2024-001</span></div>
+    </div>
+
+    <div class="parties">
+      <div class="party-card">
+        <div class="party-head seller"><div class="dot"></div>Seller</div>
+        <div class="party-body">
+          <h3>Tech Solutions (Pvt) Ltd.</h3>
+          <p class="ntn">NTN: 1234567</p>
+          <p>Punjab · Lahore</p>
+          <p>123 Main Boulevard, Gulberg III</p>
+        </div>
+      </div>
+      <div class="party-card">
+        <div class="party-head buyer"><div class="dot"></div>Buyer</div>
+        <div class="party-body">
+          <h3>Alpha Traders</h3>
+          <p class="ntn">NTN/CNIC: 7654321</p>
+          <p>Sindh · Karachi</p>
+          <p>456 Commercial Area, DHA</p>
+          <span class="reg-badge">Registered</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-lbl">Line Items</div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Description</th><th>HS Code</th>
+          <th class="text-right">Qty / UOM</th><th class="text-right">Rate</th>
+          <th class="text-right">Value excl. ST</th><th class="text-right">Sales Tax</th>
+          <th class="text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Laptop Computer (Core i7, 16GB RAM)</td><td class="mono">8471.30</td><td class="text-right">2.00 NOS</td><td class="text-right">18%</td><td class="text-right">200,000.00</td><td class="text-right">36,000.00</td><td class="text-right total-cell">PKR 236,000.00</td></tr>
+        <tr><td>2</td><td>Smartphone (256GB Storage)</td><td class="mono">8517.12</td><td class="text-right">5.00 NOS</td><td class="text-right">18%</td><td class="text-right">150,000.00</td><td class="text-right">27,000.00</td><td class="text-right total-cell">PKR 177,000.00</td></tr>
+        <tr><td>3</td><td>Wireless Keyboard &amp; Mouse Combo</td><td class="mono">8471.60</td><td class="text-right">10.00 NOS</td><td class="text-right">18%</td><td class="text-right">50,000.00</td><td class="text-right">9,000.00</td><td class="text-right total-cell">PKR 59,000.00</td></tr>
+        <tr><td>4</td><td>27" LED Monitor (4K UHD)</td><td class="mono">8528.52</td><td class="text-right">3.00 NOS</td><td class="text-right">18%</td><td class="text-right">120,000.00</td><td class="text-right">21,600.00</td><td class="text-right total-cell">PKR 141,600.00</td></tr>
+        <tr><td>5</td><td>Network Switch (24-Port Gigabit)</td><td class="mono">8517.62</td><td class="text-right">2.00 NOS</td><td class="text-right">18%</td><td class="text-right">80,000.00</td><td class="text-right">14,400.00</td><td class="text-right total-cell">PKR 94,400.00</td></tr>
+        <tr><td>6</td><td>UPS Power Backup (1500VA)</td><td class="mono">8504.40</td><td class="text-right">4.00 NOS</td><td class="text-right">18%</td><td class="text-right">60,000.00</td><td class="text-right">10,800.00</td><td class="text-right total-cell">PKR 70,800.00</td></tr>
+        <tr><td>7</td><td>External SSD Drive (1TB)</td><td class="mono">8471.70</td><td class="text-right">8.00 NOS</td><td class="text-right">18%</td><td class="text-right">40,000.00</td><td class="text-right">7,200.00</td><td class="text-right total-cell">PKR 47,200.00</td></tr>
+        <tr><td>8</td><td>IP Security Camera System (8CH)</td><td class="mono">8525.80</td><td class="text-right">1.00 SET</td><td class="text-right">18%</td><td class="text-right">95,000.00</td><td class="text-right">17,100.00</td><td class="text-right total-cell">PKR 112,100.00</td></tr>
+        <tr><td>9</td><td>Thermal Receipt Printer</td><td class="mono">8443.32</td><td class="text-right">3.00 NOS</td><td class="text-right">18%</td><td class="text-right">45,000.00</td><td class="text-right">8,100.00</td><td class="text-right total-cell">PKR 53,100.00</td></tr>
+        <tr><td>10</td><td>Cat6 Ethernet Cable (305m Roll)</td><td class="mono">8544.49</td><td class="text-right">5.00 ROL</td><td class="text-right">18%</td><td class="text-right">25,000.00</td><td class="text-right">4,500.00</td><td class="text-right total-cell">PKR 29,500.00</td></tr>
+      </tbody>
+    </table>
+
+    <div class="bottom-row">
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal</span><span>PKR 865,000.00</span></div>
+        <div class="totals-row"><span>Total Sales Tax</span><span>PKR 155,700.00</span></div>
+        <div class="totals-row grand"><span>Grand Total</span><span>PKR 1,020,700.00</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="inv-footer">
+    <span class="footer-brand">Tax<span>Digital</span></span>
+    <span>FBR Digital Invoicing System v1.12 · Pakistan Revenue Service</span>
+    <span>INV-7000007DI1747119701593</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Client } from '@/lib/db/schema/clients';
@@ -39,8 +39,10 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
   const isEdit = !!client;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [ntnValidation, setNtnValidation] = useState<{ ok: boolean; message: string } | null>(null);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<ClientFormData>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       businessName: client?.businessName ?? '',
@@ -51,6 +53,30 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
       notes: client?.notes ?? '',
     },
   });
+
+  const ntnCnicValue = useWatch({ control, name: 'ntnCnic' }) ?? '';
+
+  async function validateNtn(ntn: string) {
+    if (!ntn || !/^\d{7}$|^\d{13}$/.test(ntn)) {
+      setNtnValidation({ ok: false, message: 'Enter a valid 7-digit NTN or 13-digit CNIC first' });
+      return;
+    }
+    setValidating(true);
+    setNtnValidation(null);
+    try {
+      const res = await fetch(`/api/fbr/validate-ntn?ntn=${encodeURIComponent(ntn)}`);
+      const json = await res.json() as { valid?: boolean; name?: string; error?: string; message?: string };
+      if (res.ok && json.valid) {
+        setNtnValidation({ ok: true, message: json.name ? `✓ Verified — ${json.name}` : '✓ Verified with FBR' });
+      } else {
+        setNtnValidation({ ok: false, message: json.message ?? json.error ?? 'Not found in FBR registry' });
+      }
+    } catch {
+      setNtnValidation({ ok: false, message: 'Network error — could not reach FBR' });
+    } finally {
+      setValidating(false);
+    }
+  }
 
   async function onSubmit(data: ClientFormData) {
     setSaving(true);
@@ -116,15 +142,36 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>NTN / CNIC</label>
-              <input
-                type="text"
-                {...register('ntnCnic')}
-                className={inputClass}
-                placeholder="7 or 13 digits"
-                maxLength={13}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  {...register('ntnCnic', { onChange: () => setNtnValidation(null) })}
+                  className={inputClass}
+                  placeholder="7 or 13 digits"
+                  maxLength={13}
+                />
+                <button
+                  type="button"
+                  onClick={() => validateNtn(ntnCnicValue)}
+                  disabled={validating}
+                  className="shrink-0 px-3 py-2 text-xs font-medium rounded-lg border border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  title="Validate NTN/CNIC with FBR"
+                >
+                  {validating ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                  ) : 'Verify'}
+                </button>
+              </div>
               {errors.ntnCnic && (
                 <p className="text-xs text-[var(--error)] mt-1">{errors.ntnCnic.message}</p>
+              )}
+              {ntnValidation && (
+                <p className={`text-xs mt-1 font-medium ${ntnValidation.ok ? 'text-[var(--positive,#16a34a)]' : 'text-[var(--error)]'}`}>
+                  {ntnValidation.message}
+                </p>
               )}
             </div>
 

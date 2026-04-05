@@ -7,7 +7,9 @@ import { headers } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { invoices, lineItems } from '@/lib/db/schema/invoices';
+import { businessProfiles } from '@/lib/db/schema/business-profiles';
 import { InvoicePrint } from '@/components/invoices/InvoicePrint';
+import { PrintActions } from '@/components/invoices/PrintActions';
 
 export const metadata = {
   title: 'Print Invoice | TaxDigital',
@@ -40,47 +42,59 @@ export default async function PrintInvoicePage({
     .from(lineItems)
     .where(eq(lineItems.invoiceId, id));
 
+  const profileRows = await db
+    .select({ logoPath: businessProfiles.logoPath })
+    .from(businessProfiles)
+    .where(eq(businessProfiles.userId, session.user.id))
+    .limit(1);
+  const logoPath = profileRows[0]?.logoPath ?? null;
+
   return (
     <>
-      {/* Print-specific styles: hide nav, header, buttons */}
+      {/* Print-specific styles */}
       <style>{`
         @media print {
           nav, header, button, .no-print, [data-no-print] {
             display: none !important;
           }
-          body {
-            margin: 0;
-            padding: 0;
-          }
+          body { margin: 0; padding: 0; background: white; }
+          @page { margin: 0.4in; size: A4; }
+
           .invoice-print {
             width: 100%;
             max-width: 100%;
-            padding: 0.5in;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            border: none !important;
           }
-          @page {
-            margin: 0.5in;
-            size: A4;
-          }
+
+          /* Repeat table header on every page */
+          .invoice-print thead { display: table-header-group; }
+          .invoice-print tfoot  { display: table-footer-group; }
+
+          /* Never break a row across pages */
+          .invoice-print tbody tr { page-break-inside: avoid; break-inside: avoid; }
+
+          /* Keep header, FBR band, and totals together — never orphaned */
+          .invoice-print-header  { page-break-after: avoid; break-after: avoid; }
+          .invoice-print-totals  { page-break-before: avoid; break-before: avoid; }
+          .invoice-print-footer  { page-break-before: avoid; break-before: avoid; }
+
+          /* Accent bar doesn't need to print */
+          .invoice-print-accent  { display: none; }
+        }
+
+        @media screen {
+          body { background: #e8edf5; padding: 32px 16px; }
         }
       `}</style>
 
-      {/* Print trigger button (hidden in actual print) */}
-      <div className="no-print fixed top-4 right-4 z-50 flex gap-2">
-        <button
-          onClick={() => window.print()}
-          className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white shadow hover:bg-[var(--primary-hover)] transition-colors"
-        >
-          🖨 Print
-        </button>
-        <a
-          href={`/dashboard/invoices/${id}`}
-          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)] shadow hover:bg-[var(--surface-2)] transition-colors"
-        >
-          ← Back
-        </a>
-      </div>
+      <PrintActions
+        invoiceId={id}
+        fileName={`INV-${invoice.fbrInvoiceNumber ?? invoice.id}.pdf`}
+      />
 
-      <InvoicePrint invoice={invoice} lineItems={lineItemRows} />
+      <InvoicePrint invoice={invoice} lineItems={lineItemRows} logoPath={logoPath} />
     </>
   );
 }

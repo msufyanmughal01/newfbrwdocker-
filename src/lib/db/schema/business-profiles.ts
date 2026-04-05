@@ -2,6 +2,7 @@
 // 1:1 with users; stores business identity, personal details, and encrypted FBR token
 
 import { pgTable, uuid, text, varchar, timestamp } from 'drizzle-orm/pg-core';
+// Note: ntnCnic and cnic use text (not varchar) to accommodate AES-256-GCM encrypted values (~80+ chars)
 import { user } from './auth';
 
 export const businessProfiles = pgTable('business_profiles', {
@@ -14,7 +15,7 @@ export const businessProfiles = pgTable('business_profiles', {
 
   // Business info
   businessName: varchar('business_name', { length: 255 }),
-  ntnCnic: varchar('ntn_cnic', { length: 13 }),       // Business NTN (7 digits) or CNIC (13 digits)
+  ntnCnic: text('ntn_cnic'),       // Business NTN (7 digits) or CNIC (13 digits) — stored encrypted
   phone: varchar('phone', { length: 20 }),
   province: varchar('province', { length: 100 }),
   address: text('address'),
@@ -24,7 +25,7 @@ export const businessProfiles = pgTable('business_profiles', {
 
   // Personal / record-keeping info
   fatherName: varchar('father_name', { length: 255 }),
-  cnic: varchar('cnic', { length: 13 }),               // Personal CNIC (13 digits)
+  cnic: text('cnic'),               // Personal CNIC (13 digits) — stored encrypted
   dateOfBirth: varchar('date_of_birth', { length: 20 }),
   gender: varchar('gender', { length: 20 }),
   emergencyContact: varchar('emergency_contact', { length: 20 }),

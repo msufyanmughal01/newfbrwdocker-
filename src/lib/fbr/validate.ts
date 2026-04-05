@@ -12,14 +12,23 @@ export interface FBRItemStatus {
   itemSNo: string;
   statusCode: string;
   status: string;
-  errorCode?: string;
-  error?: string;
+  invoiceNo?: string | null;
+  errorCode?: string | null;
+  error?: string | null;
 }
 
 export interface FBRValidateResponse {
   statusCode: string;
   status: string;
-  invoiceStatuses?: FBRItemStatus[];
+  error?: string | null;
+  errorCode?: string | null;
+  invoiceStatuses?: FBRItemStatus[] | null;
+}
+
+// Actual wire shape from the FBR API — the validation result is wrapped.
+interface FBRRawValidateApiResponse {
+  dated?: string;
+  validationResponse: FBRValidateResponse;
 }
 
 // ─── Our Typed Result ─────────────────────────────────────────────────────────
@@ -55,21 +64,29 @@ function resolveFieldPath(fieldPath: string, itemSNo: string | null): string {
 
 /**
  * Validate an invoice against the FBR Validate API.
- * The scenarioId is injected into the payload only in sandbox mode.
+ *
+ * FBR response structure:
+ *   { dated, validationResponse: { statusCode, status, invoiceStatuses } }
+ *
+ * Success:   validationResponse.statusCode === "00" AND status === "Valid"
+ * Item fail: validationResponse.statusCode === "00" BUT status === "invalid" (item-level errors)
+ * Header err: validationResponse.statusCode === "01", invoiceStatuses null
  */
 export async function validateWithFBR(
   payload: FBRInvoicePayload,
   userId?: string
 ): Promise<FBRValidationResult> {
-  const raw = (await fbrPost('validateinvoicedata', payload, userId)) as FBRValidateResponse;
+  // Unwrap the outer envelope — status fields live inside validationResponse
+  const wrapped = (await fbrPost('validateinvoicedata', payload, userId)) as FBRRawValidateApiResponse;
+  const raw = wrapped.validationResponse;
 
   const errors: FBRErrorItem[] = [];
-  let valid = false;
 
-  // Status code '00' = valid
-  if (raw.statusCode === '00' || raw.status?.toLowerCase() === 'valid') {
-    valid = true;
-  }
+  // Both conditions must be true for a clean validation pass.
+  // FBR can return statusCode "00" with status "invalid" when items fail.
+  const valid =
+    raw.statusCode === '00' &&
+    raw.status?.toLowerCase() === 'valid';
 
   // Parse per-item errors from invoiceStatuses array
   if (raw.invoiceStatuses) {
@@ -88,14 +105,14 @@ export async function validateWithFBR(
     }
   }
 
-  // Header-level error (statusCode != '00' but no invoiceStatuses)
-  if (!valid && errors.length === 0 && raw.statusCode !== '00') {
-    // Map status code to an error entry if possible
-    const entry = getErrorEntry(raw.statusCode ?? '0113');
+  // Header-level error (non-"00" statusCode, no item statuses)
+  if (!valid && errors.length === 0) {
+    const headerErrorCode = raw.errorCode ?? raw.statusCode ?? '0113';
+    const entry = getErrorEntry(headerErrorCode);
     errors.push({
       itemSNo: null,
-      errorCode: raw.statusCode ?? '0113',
-      rawMessage: raw.status ?? 'Unknown FBR error',
+      errorCode: headerErrorCode,
+      rawMessage: raw.error ?? raw.status ?? 'Unknown FBR error',
       friendlyMessage: entry.userMessage,
       fieldPath: entry.fieldPath,
       severity: entry.severity,

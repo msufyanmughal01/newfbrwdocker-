@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getBusinessProfile, upsertBusinessProfile } from '@/lib/settings/business-profile';
 import { z } from 'zod';
+import { withDecryption } from '@/lib/crypto/with-decryption';
 
 const FBR_PROVINCES = [
   'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
@@ -38,17 +39,10 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ profile });
 }
 
-export async function PUT(request: NextRequest) {
+export const PUT = withDecryption(async (request: NextRequest, body: unknown) => {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
   const parsed = updateSchema.safeParse(body);
@@ -61,4 +55,4 @@ export async function PUT(request: NextRequest) {
 
   const profile = await upsertBusinessProfile(session.user.id, parsed.data);
   return NextResponse.json({ success: true, profile });
-}
+});

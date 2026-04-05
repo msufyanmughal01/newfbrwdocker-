@@ -26,6 +26,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "db:studio"],
       "port": 4983
+    },
+    {
+      "name": "Invoice Layouts Preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "public", "-p", "5500", "--no-clipboard"],
+      "port": 5500
     }
   ]
 }

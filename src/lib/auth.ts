@@ -5,6 +5,7 @@ import { db } from "./db";
 import * as schema from "./db/schema";
 import { ac, owner, operator, accountant } from "./auth-permissions";
 import { sendPasswordResetEmail, sendInvitationEmail } from "./email";
+import { encryptData, decryptData } from "./crypto/symmetric";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -28,8 +29,25 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     // Passwords stored as plain text so admin can retrieve them for users
     password: {
-      hash: async (password) => password,
-      verify: async ({ hash, password }) => hash === password,
+      /**
+       * Encrypt the password with AES-256-GCM before storing.
+       * This is reversible (admin can retrieve) unlike bcrypt.
+       * Requires ENCRYPTION_KEY env var.
+       */
+      hash: async (password) => encryptData(password.trim()),
+      /**
+       * Decrypt the stored value and compare.
+       * Legacy rows (no "aes256gcm:" prefix) are compared as plain text —
+       * they will be re-encrypted the next time the user changes their password.
+       */
+      verify: async ({ hash, password }) => {
+        try {
+          const stored = decryptData(hash); // plain text passthrough for legacy rows
+          return stored.trim() === password.trim();
+        } catch {
+          return false;
+        }
+      },
     },
     sendResetPassword: async ({ user, url }) => {
       void sendPasswordResetEmail({

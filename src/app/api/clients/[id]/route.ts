@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { updateClient, softDeleteClient } from '@/lib/clients/client-service';
 import { z } from 'zod';
+import { decryptTransitPayload, type TransitPayload } from '@/lib/crypto/transit-server';
 
 const updateSchema = z.object({
   businessName: z.string().min(1).max(255).optional(),
@@ -32,7 +33,10 @@ export async function PUT(
 
   let body: unknown;
   try {
-    body = await request.json();
+    const raw = await request.json();
+    body = request.headers.get('X-Encrypted') === '1'
+      ? decryptTransitPayload(raw as TransitPayload)
+      : raw;
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }

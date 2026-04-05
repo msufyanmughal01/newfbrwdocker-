@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { encryptedPut } from '@/lib/crypto/transit-client';
 
 interface BusinessProfileFormProps {
   profile: {
@@ -62,11 +63,7 @@ export function BusinessProfileForm({ profile }: BusinessProfileFormProps) {
     setSaveSuccess(false);
 
     try {
-      const res = await fetch('/api/settings/business-profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
-      });
+      const res = await encryptedPut('/api/settings/business-profile', { address });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

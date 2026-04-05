@@ -12,7 +12,14 @@ tests
 playwright-report
 test-results
 drizzle
-*.mjs
+# Exclude utility/seed scripts — NOT postcss.config.mjs or eslint.config.mjs
+# (those are required at build time for Tailwind v4 and ESLint)
+cleanup-db.mjs
+create-test-user.mjs
+demo-invoice-logic.mjs
+explore-database.mjs
+setup-db.mjs
+verify-tables.mjs
 scripts
 specs
 history

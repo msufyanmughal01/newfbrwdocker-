@@ -61,7 +61,7 @@ export function RevenueTrendChart({ data }: RevenueTrendChartProps) {
           width={48}
         />
         <Tooltip
-          formatter={(value: number | undefined) => [`PKR ${(value ?? 0).toLocaleString()}`, 'Revenue']}
+          formatter={(value) => [`PKR ${Number(value ?? 0).toLocaleString()}`, 'Revenue']}
           labelStyle={{ fontSize: 12 }}
           contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--foreground)' }}
         />

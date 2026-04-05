@@ -57,6 +57,8 @@ export function LineItemsTable({ form }: LineItemsTableProps) {
     name: 'items',
   });
 
+  const [minItemsError, setMinItemsError] = useState(false);
+
   // Watch all items for calculation
   const items = watch('items') || [];
 
@@ -102,18 +104,27 @@ export function LineItemsTable({ form }: LineItemsTableProps) {
 
   const handleRemoveItem = (index: number) => {
     if (fields.length > 1) {
+      setMinItemsError(false);
       remove(index);
     } else {
-      alert('At least one line item is required');
+      setMinItemsError(true);
+      setTimeout(() => setMinItemsError(false), 3000);
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">
-          Line Items ({fields.length}/100)
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-[var(--foreground)]">
+            Items ({fields.length}/100)
+          </h3>
+          {minItemsError && (
+            <span className="text-xs text-[var(--error)] bg-[var(--error-bg)] border border-[var(--error)]/20 px-2 py-0.5 rounded-full">
+              At least one item required
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={handleAddItem}

@@ -4,6 +4,16 @@
 import { db } from '@/lib/db';
 import { clients } from '@/lib/db/schema/clients';
 import { eq, and, ilike } from 'drizzle-orm';
+import { encryptData, decryptData } from '@/lib/crypto/symmetric';
+import type { Client } from '@/lib/db/schema/clients';
+
+/** Decrypt ntnCnic in a client row before returning to callers. */
+function decryptClient(row: Client): Client {
+  return {
+    ...row,
+    ntnCnic: row.ntnCnic ? decryptData(row.ntnCnic) : row.ntnCnic,
+  };
+}
 
 export interface ClientInput {
   businessName: string;
@@ -25,20 +35,23 @@ export async function listClients(userId: string, q?: string) {
   );
 
   if (q && q.length >= 2) {
-    return db
+    const qRows = await db
       .select()
       .from(clients)
       .where(and(baseCondition, ilike(clients.businessName, `%${q}%`)))
       .orderBy(clients.businessName)
       .limit(50);
+    return qRows.map(decryptClient);
   }
 
-  return db
+  const rows = await db
     .select()
     .from(clients)
     .where(baseCondition)
     .orderBy(clients.businessName)
     .limit(200);
+
+  return rows.map(decryptClient);
 }
 
 /**
@@ -50,7 +63,7 @@ export async function createClient(userId: string, data: ClientInput) {
     .values({
       userId,
       businessName: data.businessName,
-      ntnCnic: data.ntnCnic ?? null,
+      ntnCnic: data.ntnCnic ? encryptData(data.ntnCnic) : null,
       province: data.province ?? null,
       address: data.address ?? null,
       registrationType: data.registrationType ?? null,
@@ -58,7 +71,7 @@ export async function createClient(userId: string, data: ClientInput) {
     })
     .returning();
 
-  return rows[0];
+  return decryptClient(rows[0]);
 }
 
 /**
@@ -80,7 +93,7 @@ export async function updateClient(
 
   const updatePayload: Record<string, unknown> = { updatedAt: new Date() };
   if (data.businessName !== undefined) updatePayload.businessName = data.businessName;
-  if (data.ntnCnic !== undefined) updatePayload.ntnCnic = data.ntnCnic;
+  if (data.ntnCnic !== undefined) updatePayload.ntnCnic = data.ntnCnic ? encryptData(data.ntnCnic) : null;
   if (data.province !== undefined) updatePayload.province = data.province;
   if (data.address !== undefined) updatePayload.address = data.address;
   if (data.registrationType !== undefined) updatePayload.registrationType = data.registrationType;
@@ -92,7 +105,7 @@ export async function updateClient(
     .where(eq(clients.id, clientId))
     .returning();
 
-  return { client: rows[0] };
+  return { client: decryptClient(rows[0]) };
 }
 
 /**

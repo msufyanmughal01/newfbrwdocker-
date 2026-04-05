@@ -35,7 +35,6 @@ interface CreatedCredentials {
 
 interface Props {
   users: User[];
-  adminKey: string;
 }
 
 const FBR_PROVINCES = [
@@ -91,12 +90,10 @@ function SectionHeader({ title }: { title: string }) {
 
 function EditUserPanel({
   user,
-  adminKey,
   onClose,
   onSaved,
 }: {
   user: User;
-  adminKey: string;
   onClose: () => void;
   onSaved: (updated: User) => void;
 }) {
@@ -152,7 +149,7 @@ function EditUserPanel({
       const res = await fetch("/api/admin/update-user-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, adminKey, ...form }),
+        body: JSON.stringify({ userId: user.id, ...form }),
       });
       const data = await res.json();
       if (!res.ok) { setMsg(`Error: ${data.error || "Failed"}`); return; }
@@ -184,7 +181,6 @@ function EditUserPanel({
     const fd = new FormData();
     fd.append("logo", file);
     fd.append("userId", user.id);
-    fd.append("adminKey", adminKey);
     try {
       const res = await fetch("/api/admin/upload-user-logo", { method: "POST", body: fd });
       const data = await res.json();
@@ -197,7 +193,7 @@ function EditUserPanel({
   const fetchPassword = async () => {
     setLoadingPassword(true);
     try {
-      const res = await fetch(`/api/admin/user-password?userId=${encodeURIComponent(user.id)}&key=${encodeURIComponent(adminKey)}`);
+      const res = await fetch(`/api/admin/user-password?userId=${encodeURIComponent(user.id)}`);
       const data = await res.json();
       if (!res.ok) { setMsg(`Error: ${data.error || "Could not fetch password"}`); return; }
       setCurrentPassword(data.password);
@@ -212,7 +208,7 @@ function EditUserPanel({
       const res = await fetch("/api/admin/reset-user-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, adminKey, newPassword }),
+        body: JSON.stringify({ userId: user.id, newPassword }),
       });
       const data = await res.json();
       if (!res.ok) { setMsg(`Error: ${data.error || "Failed to update password"}`); return; }
@@ -484,7 +480,7 @@ function EditUserPanel({
   );
 }
 
-export function AdminDashboardClient({ users: initialUsers, adminKey }: Props) {
+export function AdminDashboardClient({ users: initialUsers }: Props) {
   const [users, setUsers] = useState<User[]>(initialUsers);
 
   // Create form state
@@ -524,7 +520,7 @@ export function AdminDashboardClient({ users: initialUsers, adminKey }: Props) {
       const res = await fetch("/api/admin/create-user-secret", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...cf, adminKey }),
+        body: JSON.stringify({ ...cf }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed to create user"); return; }
@@ -544,7 +540,7 @@ export function AdminDashboardClient({ users: initialUsers, adminKey }: Props) {
       const res = await fetch("/api/admin/delete-user-secret", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, adminKey }),
+        body: JSON.stringify({ userId }),
       });
       if (res.ok) { setUsers(prev => prev.filter(u => u.id !== userId)); setDeleteConfirmId(null); }
     } finally { setDeleting(null); }
@@ -565,7 +561,6 @@ export function AdminDashboardClient({ users: initialUsers, adminKey }: Props) {
       {editingUser && (
         <EditUserPanel
           user={editingUser}
-          adminKey={adminKey}
           onClose={() => setEditingUser(null)}
           onSaved={updated => {
             setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
@@ -600,11 +595,26 @@ export function AdminDashboardClient({ users: initialUsers, adminKey }: Props) {
             <span style={{ fontWeight: 400, fontSize: "12px", color: "rgba(255,255,255,0.45)", marginLeft: "8px" }}>Admin</span>
           </span>
         </div>
-        <div style={{
-          background: "rgba(255,255,255,0.1)", borderRadius: "8px",
-          padding: "4px 12px", fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 600,
-        }}>
-          {users.length} {users.length === 1 ? "User" : "Users"}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{
+            background: "rgba(255,255,255,0.1)", borderRadius: "8px",
+            padding: "4px 12px", fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 600,
+          }}>
+            {users.length} {users.length === 1 ? "User" : "Users"}
+          </div>
+          <button
+            onClick={async () => {
+              await fetch("/api/admin/auth", { method: "DELETE" });
+              window.location.href = "/admin/login";
+            }}
+            style={{
+              background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: "8px", padding: "4px 12px", fontSize: "12px",
+              color: "rgba(255,255,255,0.7)", fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            Logout
+          </button>
         </div>
       </div>
 

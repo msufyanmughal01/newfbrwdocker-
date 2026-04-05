@@ -6,25 +6,25 @@ import { fbrPost } from './api-client';
 import type { FBRInvoicePayload } from '../invoices/fbr-mapping';
 import type { FBRValidateResponse } from './validate';
 
-// ─── FBR Post API Response ────────────────────────────────────────────────────
-
-export interface FBRPostResponse {
-  invoiceNumber: string; // e.g. "7000007DI1747119701593" (22 or 28 chars)
-  dated: string; // ISO date string
-  validationResponse: FBRValidateResponse;
-}
-
-// ─── FBR Raw Post API Shape ───────────────────────────────────────────────────
+// ─── FBR Post API Response (actual wire shape) ────────────────────────────────
+// The FBR API wraps the validation result inside a "validationResponse" key.
+// invoiceNumber is only present on success.
 
 interface FBRRawPostResponse {
-  statusCode: string;
-  status: string;
-  invoiceNumber?: string;
+  invoiceNumber?: string;  // present on success, absent on failure
   dated?: string;
   validationResponse?: FBRValidateResponse;
 }
 
-// ─── Main Post Function ───────────────────────────────────────────────────────
+// ─── Our Typed Result ─────────────────────────────────────────────────────────
+
+export interface FBRPostResponse {
+  invoiceNumber: string; // e.g. "7000007DI1747119701593" (22 or 28 chars)
+  dated: string;
+  validationResponse: FBRValidateResponse;
+}
+
+// ─── Error ────────────────────────────────────────────────────────────────────
 
 export class FBRSubmissionError extends Error {
   constructor(
@@ -37,8 +37,14 @@ export class FBRSubmissionError extends Error {
   }
 }
 
+// ─── Main Post Function ───────────────────────────────────────────────────────
+
 /**
  * Post a validated invoice to FBR and receive the official FBR invoice number.
+ *
+ * Success: FBR returns { invoiceNumber, dated, validationResponse: { statusCode: "00" } }
+ * Failure: FBR returns { dated, validationResponse: { statusCode: "01", error: "..." } }
+ *
  * Throws FBRSubmissionError on FBR rejection.
  * Throws FBRApiError on network/timeout issues.
  */
@@ -48,11 +54,14 @@ export async function postToFBR(
 ): Promise<FBRPostResponse> {
   const raw = (await fbrPost('postinvoicedata', payload, userId)) as FBRRawPostResponse;
 
-  if (raw.statusCode !== '00' || !raw.invoiceNumber) {
+  // A successful post always contains an invoiceNumber.
+  // Status details live inside validationResponse, not at the root.
+  if (!raw.invoiceNumber) {
+    const vr = raw.validationResponse;
     throw new FBRSubmissionError(
-      raw.status ?? 'FBR submission failed',
-      raw.statusCode ?? '',
-      raw.status ?? ''
+      vr?.status ?? 'FBR submission failed',
+      vr?.statusCode ?? '',
+      vr?.status ?? ''
     );
   }
 
