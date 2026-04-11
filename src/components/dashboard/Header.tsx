@@ -1,7 +1,6 @@
 "use client";
 
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HeaderProps {
@@ -10,11 +9,14 @@ interface HeaderProps {
 }
 
 export function Header({ userName, onMobileMenuToggle }: HeaderProps) {
-  const router = useRouter();
-
   const handleLogout = async () => {
     await authClient.signOut();
-    router.push("/login");
+    // Hard redirect — clears the Next.js client router cache so the dashboard
+    // page is fully evicted. Using router.push() would keep the page in the
+    // cache and allow the Back button to restore it from bfcache.
+    // replace() removes the dashboard from browser history — the Back button
+    // can no longer return to it after logout.
+    window.location.replace("/login");
   };
 
   const initials = userName
@@ -28,17 +30,15 @@ export function Header({ userName, onMobileMenuToggle }: HeaderProps) {
     <header
       className="flex h-14 items-center justify-between px-4 sm:px-6 border-b border-[var(--border)] sticky top-0 z-40"
       style={{
-        background: "var(--bg-subtle-glass)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
+        background: "var(--bg-subtle)",
       }}
     >
       <div className="flex items-center gap-3">
-        {/* Hamburger button — visible on mobile only */}
+        {/* Hamburger button — visible on mobile/tablet only */}
         <button
           onClick={onMobileMenuToggle}
           aria-label="Open navigation menu"
-          className="flex md:hidden items-center justify-center w-8 h-8 rounded-md text-[var(--foreground-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-all duration-150"
+          className="flex lg:hidden items-center justify-center w-8 h-8 rounded-md text-[var(--foreground-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-all duration-150"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -47,8 +47,27 @@ export function Header({ userName, onMobileMenuToggle }: HeaderProps) {
           </svg>
         </button>
 
-        <span className="text-sm font-medium text-[var(--foreground-muted)] hidden sm:block">
-          TaxDigital
+        {/* Logo + app name — visible on mobile (hidden on desktop since sidebar shows it) */}
+        <div className="flex lg:hidden items-center gap-2">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
+            style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <rect x="3" y="2" width="14" height="16" rx="2" stroke="white" strokeWidth="1.5" />
+              <line x1="6" y1="7" x2="14" y2="7" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="6" y1="10" x2="14" y2="10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="6" y1="13" x2="10" y2="13" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+          <span className="text-sm font-bold text-[var(--foreground)] leading-tight">
+            Easy<span style={{ color: "#6366f1" }}>Digital</span> Invoice
+          </span>
+        </div>
+
+        {/* App name on desktop (sidebar is visible but header still labels the app) */}
+        <span className="text-sm font-medium text-[var(--foreground-muted)] hidden lg:block">
+          Easy Digital Invoice
         </span>
       </div>
 

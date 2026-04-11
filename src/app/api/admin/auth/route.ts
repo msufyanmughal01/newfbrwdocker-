@@ -2,27 +2,20 @@
 // DELETE /api/admin/auth — clear admin session cookie
 
 import { NextRequest, NextResponse } from "next/server";
-import { createSession, deleteSession } from "../_session-store";
+import { makeSessionToken, revokeAdminToken, COOKIE_NAME as _COOKIE_NAME } from "../_admin-auth";
+import { logAuditEvent, getRequestIp } from "@/lib/security/audit";
 
-const COOKIE_NAME = "admin_session";
+// getRequestIp (from audit) reads x-forwarded-for and x-real-ip and is used
+// for both rate limiting and audit events so the IP source is consistent.
+
+const COOKIE_NAME    = "admin_session";
 const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours
 
 // ── Rate limiter ─────────────────────────────────────────────────────────────
-// Simple in-memory per-IP brute-force protection.
-// Blocks after MAX_ATTEMPTS failed logins within WINDOW_MS.
-
 interface RateRecord { count: number; resetAt: number }
 const loginAttempts = new Map<string, RateRecord>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-
-function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
+const MAX_ATTEMPTS  = 5;
+const WINDOW_MS     = 15 * 60 * 1000; // 15 minutes
 
 function checkRateLimit(ip: string): { allowed: boolean; retryAfterSeconds?: number } {
   const now = Date.now();
@@ -51,47 +44,55 @@ function clearAttempts(ip: string): void {
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
+  const ip = getRequestIp(req) ?? "unknown";
 
   const { allowed, retryAfterSeconds } = checkRateLimit(ip);
   if (!allowed) {
     return NextResponse.json(
       { error: "Too many attempts. Try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(retryAfterSeconds) },
-      }
+      { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
     );
   }
 
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    recordFailure(ip);
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
   const { key } = body as { key?: string };
 
   const validKey = process.env.ADMIN_SECRET_KEY;
   if (!validKey || key !== validKey) {
     recordFailure(ip);
+    logAuditEvent({ action: "admin_login_failure", ipAddress: getRequestIp(req) });
     return NextResponse.json({ error: "Invalid key" }, { status: 401 });
   }
 
-  // Successful login — clear failure counter and issue an opaque session token.
-  // The raw ADMIN_SECRET_KEY is never stored in the cookie.
   clearAttempts(ip);
-  const token = createSession(COOKIE_MAX_AGE);
+  logAuditEvent({ action: "admin_login", ipAddress: getRequestIp(req) });
+
+  const token = makeSessionToken(validKey);
 
   const res = NextResponse.json({ success: true });
   res.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure:   process.env.NODE_ENV === "production",
     sameSite: "strict",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
+    path:     "/",
+    maxAge:   COOKIE_MAX_AGE,
   });
   return res;
 }
 
 export async function DELETE(req: NextRequest) {
+  // Revoke the token server-side so it is rejected even if the cookie persists
+  // (e.g. extracted from a log, replayed from another device).
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (token) deleteSession(token);
+  if (token) {
+    revokeAdminToken(token);
+  }
 
   const res = NextResponse.json({ success: true });
   res.cookies.delete(COOKIE_NAME);

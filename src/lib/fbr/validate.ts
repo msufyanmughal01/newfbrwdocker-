@@ -72,12 +72,23 @@ function resolveFieldPath(fieldPath: string, itemSNo: string | null): string {
  * Item fail: validationResponse.statusCode === "00" BUT status === "invalid" (item-level errors)
  * Header err: validationResponse.statusCode === "01", invoiceStatuses null
  */
+/**
+ * Allowed invoiceType values — intentionally limited.
+ *
+ * Per FBR spec section 5.2 (doctypecode reference API), the FBR system only
+ * returns two docTypeIds for digital invoicing:
+ *   • docTypeId 4 — "Sale Invoice"
+ *   • docTypeId 9 — "Debit Note"
+ * Other document types (credit notes, etc.) are NOT supported by the PDI API
+ * and must not be added here without confirming support in a new API spec version.
+ */
 export async function validateWithFBR(
   payload: FBRInvoicePayload,
-  userId?: string
+  userId?: string,
+  envOverride?: string
 ): Promise<FBRValidationResult> {
   // Unwrap the outer envelope — status fields live inside validationResponse
-  const wrapped = (await fbrPost('validateinvoicedata', payload, userId)) as FBRRawValidateApiResponse;
+  const wrapped = (await fbrPost('validateinvoicedata', payload, userId, envOverride)) as FBRRawValidateApiResponse;
   const raw = wrapped.validationResponse;
 
   const errors: FBRErrorItem[] = [];

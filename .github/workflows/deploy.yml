@@ -104,17 +104,26 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           FULL_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: FULL_IMAGE
+          envs: FULL_IMAGE,DOMAIN_NAME
           script: |
             set -euo pipefail
-            cd /opt/taxdigital
+            cd /opt/easydigital
+
+            # Replace YOUR_DOMAIN placeholder in nginx.conf with the real domain.
+            # This is safe to run on every deploy — idempotent once replaced.
+            if grep -q "YOUR_DOMAIN" nginx.conf 2>/dev/null; then
+              echo "Replacing YOUR_DOMAIN with ${DOMAIN_NAME} in nginx.conf..."
+              sed -i "s/YOUR_DOMAIN/${DOMAIN_NAME}/g" nginx.conf
+              echo "nginx.conf updated."
+            fi
 
             # Capture the currently-running image ID for rollback
-            PREV_IMAGE=$(docker inspect taxdigital-app --format='{{.Image}}' 2>/dev/null || echo "")
+            PREV_IMAGE=$(docker inspect easydigital-app --format='{{.Image}}' 2>/dev/null || echo "")
 
             # Pull new image before stopping old container
             docker pull "${FULL_IMAGE}"
@@ -122,12 +131,16 @@ jobs:
             # Run DB migrations before swapping containers.
             # Schema must be up-to-date before new code starts.
             # --network is required so the migration container can reach the
-            # Postgres container on the internal taxdigital-net bridge.
-            docker run --rm \
-              --network taxdigital-net \
+            # Postgres container on the internal easydigital-net bridge.
+            echo "Running database migrations..."
+            if ! docker run --rm \
+              --network easydigital-net \
               --env-file .env.production \
               "${FULL_IMAGE}" \
-              npx drizzle-kit migrate
+              npx drizzle-kit migrate; then
+              echo "ERROR: Database migration failed — aborting deployment"
+              exit 1
+            fi
 
             # Zero-downtime rolling restart:
             # Recreate only the app container; --no-deps leaves nginx untouched.
@@ -137,7 +150,7 @@ jobs:
             echo "Waiting for health check..."
             HEALTHY=0
             for i in $(seq 1 12); do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' taxdigital-app 2>/dev/null || echo "unknown")
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' easydigital-app 2>/dev/null || echo "unknown")
               if [ "$STATUS" = "healthy" ]; then
                 echo "App is healthy after $((i * 5))s"
                 HEALTHY=1
@@ -152,12 +165,12 @@ jobs:
               # Rollback: restart the container using the previous image digest
               if [ -n "$PREV_IMAGE" ]; then
                 echo "Rolling back to previous image: ${PREV_IMAGE}"
-                docker stop taxdigital-app || true
-                docker rm taxdigital-app || true
+                docker stop easydigital-app || true
+                docker rm easydigital-app || true
                 docker run -d \
-                  --name taxdigital-app \
+                  --name easydigital-app \
                   --env-file .env.production \
-                  --network taxdigital-net \
+                  --network easydigital-net \
                   --restart unless-stopped \
                   "${PREV_IMAGE}" || echo "Rollback failed — manual intervention required"
               else

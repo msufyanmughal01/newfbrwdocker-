@@ -2,16 +2,17 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { user as userTable } from "@/lib/db/schema";
+import { account } from "@/lib/db/schema";
 import { businessProfiles } from "@/lib/db/schema/business-profiles";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { AdminDashboardClient } from "./admin-client";
+import { verifyAdminCookie } from "@/app/api/admin/_admin-auth";
 
 export default async function AdminPage() {
   const cookieStore = await cookies();
-  const adminSession = cookieStore.get("admin_session");
-  const adminKey = process.env.ADMIN_SECRET_KEY;
+  const token = cookieStore.get("admin_session")?.value;
 
-  if (!adminKey || adminSession?.value !== adminKey) {
+  if (!token || !verifyAdminCookie(token)) {
     redirect("/admin/login");
   }
 
@@ -22,6 +23,13 @@ export default async function AdminPage() {
       email: userTable.email,
       emailVerified: userTable.emailVerified,
       createdAt: userTable.createdAt,
+      // Signup method: 'google' if they used Google OAuth, 'credential' otherwise
+      provider: sql<string>`(
+        SELECT CASE WHEN EXISTS(
+          SELECT 1 FROM account a
+          WHERE a.user_id = ${userTable.id} AND a.provider_id = 'google'
+        ) THEN 'google' ELSE 'credential' END
+      )`.as("provider"),
       // Business info
       businessName: businessProfiles.businessName,
       ntnCnic: businessProfiles.ntnCnic,
@@ -32,6 +40,9 @@ export default async function AdminPage() {
       postalCode: businessProfiles.postalCode,
       fbrTokenHint: businessProfiles.fbrTokenHint,
       logoPath: businessProfiles.logoPath,
+      planSlug: businessProfiles.planSlug,
+      planActivatedAt: businessProfiles.planActivatedAt,
+      billingCycleStart: businessProfiles.billingCycleStart,
       // Personal info
       fatherName: businessProfiles.fatherName,
       cnic: businessProfiles.cnic,

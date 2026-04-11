@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { DraftsClient } from './DraftsClient';
 
 export const metadata = {
-  title: 'Drafts | TaxDigital',
+  title: 'Drafts | Easy Digital Invoice',
 };
 
 export default async function DraftsPage() {

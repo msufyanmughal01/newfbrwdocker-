@@ -6,6 +6,7 @@ import { auth } from '@/lib/auth';
 import { listClients, createClient } from '@/lib/clients/client-service';
 import { z } from 'zod';
 import { withDecryption } from '@/lib/crypto/with-decryption';
+import { logAuditEvent, getRequestIp } from '@/lib/security/audit';
 
 const createSchema = z.object({
   businessName: z.string().min(1, 'Business name is required').max(255),
@@ -52,5 +53,14 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
   }
 
   const client = await createClient(session.user.id, parsed.data);
+
+  logAuditEvent({
+    action:    'client_created',
+    userId:    session.user.id,
+    ipAddress: getRequestIp(request),
+    userAgent: request.headers.get('user-agent') ?? undefined,
+    metadata:  { clientId: client.id },
+  });
+
   return NextResponse.json({ success: true, client }, { status: 201 });
 });

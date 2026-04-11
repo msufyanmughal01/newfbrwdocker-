@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SandboxBanner } from "@/components/dashboard/SandboxBanner";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface SidebarProps {
   isMobileOpen: boolean;
   onMobileClose: () => void;
   transitionsEnabled: boolean;
+  isSandbox?: boolean;
 }
 
 const navItems = [
@@ -100,6 +102,15 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: "/sandbox",
+    label: "Sandbox",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5a2 2 0 0 1-2-2V9m6 5h10a2 2 0 0 0 2-2V9m0 0H3"/>
+      </svg>
+    ),
+  },
 ];
 
 const settingsIcon = (
@@ -113,10 +124,12 @@ function SidebarContent({
   isOpen,
   onToggle,
   onNavClick,
+  isSandbox,
 }: {
   isOpen: boolean;
   onToggle: () => void;
   onNavClick?: () => void;
+  isSandbox?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -126,16 +139,21 @@ function SidebarContent({
       <div className={`border-b border-[var(--border)] ${isOpen ? "p-4" : "py-3 px-2"}`}>
         <div className={`flex items-center ${isOpen ? "gap-3" : "flex-col gap-2"}`}>
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
             style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)" }}
           >
-            TD
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <rect x="3" y="2" width="14" height="16" rx="2" stroke="white" strokeWidth="1.5" />
+              <line x1="6" y1="7" x2="14" y2="7" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="6" y1="10" x2="14" y2="10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="6" y1="13" x2="10" y2="13" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
           </div>
 
           {isOpen && (
             <div className="flex-1 min-w-0">
               <h2 className="text-sm font-bold text-[var(--foreground)] leading-tight">
-                TaxDigital
+                Easy Digital Invoice
               </h2>
               <p className="text-xs text-[var(--foreground-subtle)] leading-tight">
                 Digital Tax Compliance
@@ -202,6 +220,13 @@ function SidebarContent({
         </ul>
       </nav>
 
+      {/* Sandbox indicator — pinned above settings */}
+      {isSandbox && (
+        <div className={`${isOpen ? "pb-2" : "pb-1"}`}>
+          <SandboxBanner collapsed={!isOpen} />
+        </div>
+      )}
+
       {/* Settings — pinned at bottom */}
       <div className={`border-t border-[var(--border)] ${isOpen ? "p-3" : "p-2"}`}>
         <Link
@@ -225,13 +250,13 @@ function SidebarContent({
   );
 }
 
-export function Sidebar({ isOpen, onToggle, isMobileOpen, onMobileClose, transitionsEnabled }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, isMobileOpen, onMobileClose, transitionsEnabled, isSandbox }: SidebarProps) {
   return (
     <>
       {/* Mobile backdrop — renders behind the drawer, closes on click */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={onMobileClose}
           aria-hidden="true"
         />
@@ -241,23 +266,23 @@ export function Sidebar({ isOpen, onToggle, isMobileOpen, onMobileClose, transit
       {/* transition-all is withheld until after the initial viewport correction
           to prevent the animated collapse flash seen in production builds. */}
       <aside
-        className={`hidden md:flex flex-col shrink-0 h-screen sticky top-0 border-r border-[var(--border)] overflow-hidden ${
+        className={`hidden lg:flex flex-col shrink-0 h-screen sticky top-0 border-r border-[var(--border)] overflow-hidden ${
           transitionsEnabled ? "transition-all duration-200 ease-in-out" : ""
         } ${isOpen ? "w-60" : "w-14"}`}
         style={{ background: "var(--bg-subtle)" }}
       >
-        <SidebarContent isOpen={isOpen} onToggle={onToggle} />
+        <SidebarContent isOpen={isOpen} onToggle={onToggle} isSandbox={isSandbox} />
       </aside>
 
       {/* Mobile drawer — fixed overlay, slides in from left */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col w-60 md:hidden border-r border-[var(--border)] transition-transform duration-200 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col w-60 lg:hidden border-r border-[var(--border)] transition-transform duration-200 ease-in-out ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ background: "var(--bg-subtle)" }}
         aria-hidden={!isMobileOpen}
       >
-        <SidebarContent isOpen={true} onToggle={onMobileClose} onNavClick={onMobileClose} />
+        <SidebarContent isOpen={true} onToggle={onMobileClose} onNavClick={onMobileClose} isSandbox={isSandbox} />
       </aside>
     </>
   );

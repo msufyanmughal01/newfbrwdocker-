@@ -8,6 +8,9 @@ import { invoiceSchema } from '@/lib/invoices/validation';
 import { mapToFBRFormat } from '@/lib/invoices/fbr-mapping';
 import { validateWithFBR } from '@/lib/fbr/validate';
 import { FBRApiError } from '@/lib/fbr/api-client';
+import { db } from '@/lib/db';
+import { businessProfiles } from '@/lib/db/schema/business-profiles';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate
@@ -36,8 +39,16 @@ export async function POST(request: NextRequest) {
       (fbrPayload as unknown as Record<string, unknown>).scenarioId = scenarioId;
     }
 
-    // 4. Call FBR Validate API (pass userId for per-user token resolution)
-    const result = await validateWithFBR(fbrPayload, userId);
+    // 4. Resolve user's FBR environment setting
+    const profileRows = await db
+      .select({ fbrEnvironment: businessProfiles.fbrEnvironment })
+      .from(businessProfiles)
+      .where(eq(businessProfiles.userId, userId))
+      .limit(1);
+    const fbrEnvironment = profileRows[0]?.fbrEnvironment;
+
+    // 5. Call FBR Validate API (pass userId for per-user token resolution)
+    const result = await validateWithFBR(fbrPayload, userId, fbrEnvironment);
 
     if (result.valid) {
       return NextResponse.json({
@@ -59,14 +70,15 @@ export async function POST(request: NextRequest) {
       );
     }
     if (err instanceof Error && err.name === 'ZodError') {
+      // Return a generic message — Zod's internal path/message may expose schema details
       return NextResponse.json(
-        { error: 'Invoice data is invalid', details: err.message },
+        { error: 'Invoice data is invalid. Please check all fields and try again.' },
         { status: 422 }
       );
     }
-    console.error('FBR validate error:', err);
+    console.error('FBR validate error:', err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { error: 'FBR validation failed', details: (err as Error).message },
+      { error: 'FBR validation failed' },
       { status: 500 }
     );
   }

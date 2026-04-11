@@ -6,6 +6,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { invoices } from '@/lib/db/schema/invoices';
 import { eq, and } from 'drizzle-orm';
+import { logAuditEvent, getRequestIp } from '@/lib/security/audit';
 
 export async function PATCH(
   request: NextRequest,
@@ -100,6 +101,14 @@ export async function DELETE(
   await db
     .delete(invoices)
     .where(and(eq(invoices.id, id), eq(invoices.userId, session.user.id)));
+
+  logAuditEvent({
+    action:    'invoice_deleted',
+    userId:    session.user.id,
+    ipAddress: getRequestIp(request),
+    userAgent: request.headers.get('user-agent') ?? undefined,
+    metadata:  { invoiceId: id },
+  });
 
   return NextResponse.json({ success: true });
 }

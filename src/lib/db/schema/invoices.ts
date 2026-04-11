@@ -1,7 +1,7 @@
 // Drizzle ORM Schema for Invoices
 // FBR-compliant invoice and line item schema
 
-import { pgTable, uuid, varchar, date, timestamp, jsonb, decimal, text, pgEnum, integer, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, date, timestamp, jsonb, decimal, text, pgEnum, integer, boolean, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { user } from './auth';
 
@@ -73,6 +73,9 @@ export const invoices = pgTable(
 
   // Status tracking (FBR lifecycle: draft → validating → validated → submitting → issued | failed)
   status: invoiceStatusEnum('status').notNull().default('draft'),
+
+  // Sandbox flag — true if created while user's fbrEnvironment was 'sandbox'
+  isSandbox: boolean('is_sandbox').notNull().default(false),
 
   // Metadata
   createdAt: timestamp('created_at').notNull().defaultNow(),

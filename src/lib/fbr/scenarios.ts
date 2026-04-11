@@ -30,7 +30,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN003',
     description: 'Steel Melting / Re-rolled Products',
-    saleType: 'Steel Melting/Re-Rolling',
+    saleType: 'Steel Melting and re-rolling',
     taxVariant: '17%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Special rate for melted/re-rolled steel products.',
@@ -38,7 +38,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN004',
     description: 'Ship Breakers',
-    saleType: 'Ship Breakers',
+    saleType: 'Ship breaking',
     taxVariant: '17%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Ship breaking and scrap steel from vessels.',
@@ -86,7 +86,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN010',
     description: 'Telecom Services',
-    saleType: 'Telecom Services',
+    saleType: 'Telecommunication services',
     taxVariant: '19.5%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Telecom services taxed at higher rate.',
@@ -94,7 +94,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN011',
     description: 'Toll Manufacturing — Steel',
-    saleType: 'Toll Manufacturing (Steel)',
+    saleType: 'Toll Manufacturing',
     taxVariant: '17%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Processing/conversion services for steel products.',
@@ -110,7 +110,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN013',
     description: 'Electricity Retailers',
-    saleType: 'Electricity (Retailers)',
+    saleType: 'Electricity Supply to Retailers',
     taxVariant: '17%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Electricity distribution and retailing.',
@@ -118,7 +118,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN014',
     description: 'Natural Gas / CNG',
-    saleType: 'Gas/CNG',
+    saleType: 'Gas to CNG stations',
     taxVariant: '17%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Natural gas and compressed natural gas sales.',
@@ -214,7 +214,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN026',
     description: 'Retailer — End Consumer Sale',
-    saleType: 'Retailer (End Consumer)',
+    saleType: 'Goods at Standard Rate (default)',
     taxVariant: '18%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Retailer selling to final consumer.',
@@ -222,7 +222,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN027',
     description: 'Retailer — Registered Purchaser',
-    saleType: 'Retailer (Registered Purchaser)',
+    saleType: '3rd Schedule Goods',
     taxVariant: '18%',
     requiredFields: ['buyerNTNCNIC', 'hsCode', 'rate', 'saleType'],
     notes: 'Retailer selling to a registered buyer.',
@@ -230,7 +230,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN028',
     description: 'Retailer — Non-Consumer Unregistered',
-    saleType: 'Retailer (Unregistered Non-Consumer)',
+    saleType: 'Goods at Reduced Rate',
     taxVariant: '18% + 2% further',
     requiredFields: ['hsCode', 'rate', 'furtherTax', 'saleType'],
     notes: 'Retailer selling to unregistered non-consumer buyer.',

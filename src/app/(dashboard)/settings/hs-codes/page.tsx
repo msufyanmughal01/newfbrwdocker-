@@ -6,7 +6,7 @@ import { headers } from 'next/headers';
 import { HSCodeMasterManager } from '@/components/settings/HSCodeMasterManager';
 
 export const metadata = {
-  title: 'HS Codes | TaxDigital',
+  title: 'HS Codes | Easy Digital Invoice',
 };
 
 export default async function HSCodesPage() {

@@ -1,10 +1,17 @@
 // T038 [US4]: Dashboard page — analytics with date filtering
 // Server component: fetches initial metrics server-side, eliminating client-side waterfall
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { getDashboardMetrics, getRevenueTrend } from "@/lib/analytics/dashboard-metrics";
+import { getSession } from "@/lib/session";
+import type { Metadata } from "next";
+import { getDashboardMetrics, getRevenueTrend, getRecentInvoices } from "@/lib/analytics/dashboard-metrics";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Your FBR invoicing analytics — total revenue, sales tax, invoice count, and recent activity.",
+};
+import { getQuotaStatus } from "@/lib/subscriptions/quota";
+import { getBusinessProfile } from "@/lib/settings/business-profile";
 import { DashboardContent } from "./DashboardContent";
 
 function getDefaultDates() {
@@ -17,19 +24,20 @@ function getDefaultDates() {
 }
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
-    redirect("/sign-in");
+    redirect("/login");
   }
 
   const { from, to } = getDefaultDates();
 
-  const [initialMetrics, initialTrend] = await Promise.all([
+  const [initialMetrics, initialTrend, planStatus, recentInvoices, sellerProfile] = await Promise.all([
     getDashboardMetrics(session.user.id, from, to),
     getRevenueTrend(session.user.id, from, to),
+    getQuotaStatus(session.user.id),
+    getRecentInvoices(session.user.id, 6),
+    getBusinessProfile(session.user.id),
   ]);
 
   return (
@@ -46,6 +54,22 @@ export default async function DashboardPage() {
           initialTrend={initialTrend}
           initialFrom={from}
           initialTo={to}
+          planStatus={{
+            planSlug: planStatus.planSlug,
+            planName: planStatus.planName,
+            invoicesPerMonth: planStatus.invoicesPerMonth,
+            invoicesUsed: planStatus.invoicesUsed,
+            fbrEnvironment: planStatus.fbrEnvironment,
+            limitReached: planStatus.limitReached,
+          }}
+          recentInvoices={recentInvoices}
+          sellerProfile={sellerProfile ? {
+            ntnCnic: sellerProfile.ntnCnic,
+            cnic: sellerProfile.cnic,
+            businessCredentials: sellerProfile.businessCredentials as Array<{ type: string; value: string; includeInInvoice: boolean }> | null,
+            fbrTokenHint: sellerProfile.fbrTokenHint,
+            fbrEnvironment: sellerProfile.fbrEnvironment,
+          } : null}
         />
       </div>
     </div>

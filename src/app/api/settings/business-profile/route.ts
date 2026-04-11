@@ -12,16 +12,46 @@ const FBR_PROVINCES = [
   'Gilgit Baltistan', 'Azad Kashmir', 'Islamabad',
 ];
 
+const paymentDetailsSchema = z.object({
+  bankName: z.string().max(255).optional(),
+  iban: z.string().max(50).optional(),
+  accountTitle: z.string().max(255).optional(),
+  branch: z.string().max(255).optional(),
+}).nullable().optional();
+
+const businessCredentialSchema = z.object({
+  type: z.string().max(100),
+  value: z.string().max(500),
+  includeInInvoice: z.boolean(),
+});
+
 const updateSchema = z.object({
   businessName: z.string().min(1).max(255).optional(),
+  businessEmail: z.string().email().max(255).optional().or(z.literal('')),
   ntnCnic: z
     .string()
-    .regex(/^\d{7}$|^\d{13}$/, 'Must be 7 digits (NTN) or 13 digits (CNIC)')
+    .regex(/^\d{7}$/, 'NTN must be exactly 7 digits')
     .optional()
     .or(z.literal('')),
+  cnic: z
+    .string()
+    .regex(/^\d{13}$/, 'CNIC must be exactly 13 digits')
+    .optional()
+    .or(z.literal('')),
+  phone: z.string().max(20).optional(),
   province: z.enum(FBR_PROVINCES as [string, ...string[]]).optional().or(z.literal('')),
   address: z.string().max(1000).optional(),
+  city: z.string().max(100).optional(),
+  postalCode: z.string().max(20).optional(),
   fbrToken: z.string().min(1).optional(),
+  fbrEnvironment: z.enum(['sandbox', 'production']).optional(),
+  fbrPosid: z.string().max(50).optional().nullable(),
+  invoiceNote: z.string().max(2000).optional().nullable(),
+  invoiceNoteMode: z.enum(['always', 'never', 'ask']).optional(),
+  paymentDetails: paymentDetailsSchema,
+  paymentDetailsMode: z.enum(['always', 'never', 'ask']).optional(),
+  businessCredentials: z.array(businessCredentialSchema).nullable().optional(),
+  invoiceAddressType: z.enum(['business', 'fbr']).optional(),
 });
 
 export async function GET(request: NextRequest) {

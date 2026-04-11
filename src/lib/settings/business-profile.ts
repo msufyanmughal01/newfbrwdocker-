@@ -1,6 +1,7 @@
 // Business Profile DB service
 // Provides read/write helpers for the business_profiles table
 
+import { cache } from 'react';
 import { db } from '@/lib/db';
 import { businessProfiles } from '@/lib/db/schema/business-profiles';
 import { eq } from 'drizzle-orm';
@@ -19,19 +20,47 @@ function decryptProfile(profile: BusinessProfile): Omit<BusinessProfile, 'fbrTok
   };
 }
 
+export interface PaymentDetails {
+  bankName?: string;
+  iban?: string;
+  accountTitle?: string;
+  branch?: string;
+}
+
+export interface BusinessCredential {
+  type: string;
+  value: string;
+  includeInInvoice: boolean;
+}
+
 export interface BusinessProfileInput {
   businessName?: string;
+  businessEmail?: string;
   ntnCnic?: string;
+  cnic?: string;
+  phone?: string;
   province?: string;
   address?: string;
+  city?: string;
+  postalCode?: string;
   logoPath?: string;
-  fbrToken?: string; // plain text — encrypted before storage
+  fbrToken?: string;           // plain text — encrypted before storage
+  fbrEnvironment?: string;     // 'sandbox' | 'production'
+  fbrPosid?: string | null;
+  invoiceNote?: string | null;
+  invoiceNoteMode?: string;    // 'always' | 'never' | 'ask'
+  paymentDetails?: PaymentDetails | null;
+  paymentDetailsMode?: string; // 'always' | 'never' | 'ask'
+  businessCredentials?: BusinessCredential[] | null;
+  invoiceAddressType?: string; // 'business' | 'fbr'
 }
 
 /**
  * Retrieve a user's business profile. Returns null if none exists.
+ * Wrapped with React.cache() so multiple callers within the same server
+ * render tree (layout + page) share one DB query per request.
  */
-export async function getBusinessProfile(userId: string) {
+export const getBusinessProfile = cache(async (userId: string) => {
   const rows = await db
     .select()
     .from(businessProfiles)
@@ -43,7 +72,7 @@ export async function getBusinessProfile(userId: string) {
   if (!profile) return null;
 
   return decryptProfile(profile);
-}
+});
 
 /**
  * Create or update a user's business profile (upsert by userId).
@@ -58,14 +87,29 @@ export async function upsertBusinessProfile(
   };
 
   if (data.businessName !== undefined) updatePayload.businessName = data.businessName;
+  if (data.businessEmail !== undefined) updatePayload.businessEmail = data.businessEmail;
   if (data.ntnCnic !== undefined) updatePayload.ntnCnic = data.ntnCnic ? encryptData(data.ntnCnic) : null;
+  if (data.cnic !== undefined) updatePayload.cnic = data.cnic ? encryptData(data.cnic) : null;
+  if (data.phone !== undefined) updatePayload.phone = data.phone;
   if (data.province !== undefined) updatePayload.province = data.province;
   if (data.address !== undefined) updatePayload.address = data.address;
+  if (data.city !== undefined) updatePayload.city = data.city;
+  if (data.postalCode !== undefined) updatePayload.postalCode = data.postalCode;
   if (data.logoPath !== undefined) updatePayload.logoPath = data.logoPath;
+  if (data.fbrEnvironment !== undefined) updatePayload.fbrEnvironment = data.fbrEnvironment;
+  if (data.fbrPosid !== undefined) updatePayload.fbrPosid = data.fbrPosid;
+  if (data.invoiceNote !== undefined) updatePayload.invoiceNote = data.invoiceNote;
+  if (data.invoiceNoteMode !== undefined) updatePayload.invoiceNoteMode = data.invoiceNoteMode;
+  if (data.paymentDetails !== undefined) updatePayload.paymentDetails = data.paymentDetails;
+  if (data.paymentDetailsMode !== undefined) updatePayload.paymentDetailsMode = data.paymentDetailsMode;
+  if (data.businessCredentials !== undefined) updatePayload.businessCredentials = data.businessCredentials;
+  if (data.invoiceAddressType !== undefined) updatePayload.invoiceAddressType = data.invoiceAddressType;
 
   if (data.fbrToken) {
-    updatePayload.fbrTokenEncrypted = encrypt(data.fbrToken);
-    updatePayload.fbrTokenHint = '••••' + data.fbrToken.slice(-4);
+    const token = data.fbrToken.trim();
+    updatePayload.fbrTokenEncrypted = encrypt(token);
+    updatePayload.fbrTokenHint = '••••' + token.slice(-4);
+    updatePayload.fbrTokenUpdatedAt = new Date();
   }
 
   await db

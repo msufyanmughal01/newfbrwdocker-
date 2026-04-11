@@ -45,16 +45,16 @@
 /* ─── DARK MODE OVERRIDES ────────────────────────────────── */
 .dark {
   color-scheme: dark;
-  --bg: #080c14;
-  --bg-subtle: #0d1120;
-  --surface: rgba(255,255,255,0.04);
-  --surface-2: rgba(255,255,255,0.07);
-  --surface-3: rgba(255,255,255,0.11);
-  --border: rgba(255,255,255,0.08);
-  --border-strong: rgba(255,255,255,0.16);
-  --foreground: #e8edf5;
-  --foreground-muted: rgba(232,237,245,0.6);
-  --foreground-subtle: rgba(232,237,245,0.35);
+  --bg: #09090b;
+  --bg-subtle: #0e0e12;
+  --surface: #111117;
+  --surface-2: #18181f;
+  --surface-3: #1f1f28;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --foreground: #fafafa;
+  --foreground-muted: #a1a1aa;
+  --foreground-subtle: #71717a;
   --primary: #6366f1;
   --primary-hover: #818cf8;
   --primary-fg: #ffffff;
@@ -71,7 +71,7 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
   --shadow: 0 4px 16px rgba(0,0,0,0.4);
   --shadow-lg: 0 8px 40px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04);
-  --bg-subtle-glass: rgba(13,17,32,0.85);
+  --bg-subtle-glass: rgba(9,9,11,0.92);
 }
 
 /* ─── BASE ───────────────────────────────────────────────── */
@@ -112,8 +112,8 @@ input, select, textarea {
 
 .dark body {
   background-image:
-    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(99,102,241,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(34,211,238,0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(99,102,241,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(34,211,238,0.03) 0%, transparent 60%);
   background-attachment: fixed;
 }
 
@@ -149,6 +149,9 @@ input, select, textarea {
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.5; transform: scale(0.85); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .animate-fade-up   { animation: fadeUp  0.35s ease-out both; }

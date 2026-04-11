@@ -6,9 +6,13 @@ import { invoices, lineItems } from '@/lib/db/schema/invoices';
 import { invoiceSchema } from '@/lib/invoices/validation';
 import { calculateInvoiceTotals } from '@/lib/invoices/calculations';
 import { mapToFBRFormat, validateFBRPayload } from '@/lib/invoices/fbr-mapping';
+import { getQuotaStatus } from '@/lib/subscriptions/quota';
 import { ZodError } from 'zod';
 import { withDecryption } from '@/lib/crypto/with-decryption';
 import { encryptData, decryptData } from '@/lib/crypto/symmetric';
+import { eq, and, gte, sql } from 'drizzle-orm';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { logAuditEvent, getRequestIp } from '@/lib/security/audit';
 
 /**
  * POST /api/invoices
@@ -33,14 +37,38 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
 
     const userId = session.user.id;
 
-    // 2. body already parsed (and decrypted if X-Encrypted: 1) by withDecryption HOC
+    // 2a. Redis-backed rate limit (authoritative across replicas — supplements
+    //     the edge middleware's in-process check).
+    const ip = getRequestIp(request) ?? 'unknown';
+    const rl = await checkRateLimit('invoice', `${userId}:${ip}`, { window: 60_000, max: 20 });
+    if (rl.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait and try again.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+      );
+    }
 
+    // 2. Subscription quota check (uses billing cycle start if set)
+    const quota = await getQuotaStatus(userId);
+
+    if (quota.limitReached) {
+      return NextResponse.json({
+        success: false,
+        error: `Monthly invoice limit reached. Your ${quota.planName} plan allows ${quota.invoicesPerMonth} invoices per month. You have used ${quota.invoicesUsed}. Please contact admin to upgrade your plan.`,
+        limitReached: true,
+        currentCount: quota.invoicesUsed,
+        limit: quota.invoicesPerMonth,
+        planName: quota.planName,
+      }, { status: 429 });
+    }
+
+    // 3. body already parsed (and decrypted if X-Encrypted: 1) by withDecryption HOC
     const validated = invoiceSchema.parse(body as Record<string, unknown>);
 
-    // 3. Calculate totals
+    // 4. Calculate totals
     const calculations = calculateInvoiceTotals(validated.items);
 
-    // 4. Map to FBR format and validate
+    // 5. Map to FBR format and validate
     const fbrPayload = mapToFBRFormat(validated);
     const fbrValidation = validateFBRPayload(fbrPayload);
 
@@ -52,8 +80,24 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
       }, { status: 400 });
     }
 
-    // 5. Save to database (transaction)
+    // 6. Save to database (transaction)
+    // Quota is re-checked INSIDE the transaction to close the race window
+    // between concurrent requests that both passed the initial soft-check above.
     const [invoice] = await db.transaction(async (tx) => {
+      if (quota.invoicesPerMonth !== null) {
+        const [{ count }] = await tx
+          .select({ count: sql<number>`cast(count(*) as int)` })
+          .from(invoices)
+          .where(and(eq(invoices.userId, userId), gte(invoices.createdAt, quota.cycleStart)));
+
+        if (count >= quota.invoicesPerMonth) {
+          throw Object.assign(
+            new Error('QUOTA_EXCEEDED'),
+            { code: 'QUOTA_EXCEEDED', used: count, limit: quota.invoicesPerMonth }
+          );
+        }
+      }
+
       // Insert invoice
       const [newInvoice] = await tx.insert(invoices).values({
         userId,
@@ -75,6 +119,7 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         fbrPayload: fbrPayload as any,
         status: 'draft',
+        isSandbox: quota.fbrEnvironment === 'sandbox',
       }).returning();
 
       // Insert line items
@@ -104,6 +149,14 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
       return [newInvoice];
     });
 
+    logAuditEvent({
+      action:    'invoice_created',
+      userId,
+      ipAddress: ip,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+      metadata:  { invoiceId: invoice.id, isSandbox: invoice.isSandbox },
+    });
+
     return NextResponse.json({
       success: true,
       invoiceId: invoice.id,
@@ -124,18 +177,24 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
       }, { status: 400 });
     }
 
-    console.error('❌ Invoice creation error:', error);
-    console.error('Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    // Quota exceeded inside transaction (race condition guard)
+    if (error instanceof Error && (error as NodeJS.ErrnoException & { code?: string }).code === 'QUOTA_EXCEEDED') {
+      const quotaErr = error as Error & { used?: number; limit?: number | null };
+      return NextResponse.json({
+        success: false,
+        error: 'Monthly invoice limit reached. Please contact admin to upgrade your plan.',
+        limitReached: true,
+        limit: quotaErr.limit ?? null,
+      }, { status: 429 });
+    }
+
+    // Log full error server-side for debugging, but NEVER expose stack traces,
+    // error types, or internal messages to the client in production.
+    console.error('❌ Invoice creation error:', error instanceof Error ? error.message : error);
 
     return NextResponse.json({
       success: false,
       error: 'Failed to create invoice',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      errorType: error instanceof Error ? error.name : typeof error,
     }, { status: 500 });
   }
 });
@@ -157,11 +216,17 @@ export async function GET(request: NextRequest) {
 
     const userId = session.user.id;
 
-    // Get invoices for this user
+    const PAGE_SIZE = 50;
+    const pageParam = parseInt(request.nextUrl.searchParams.get('page') ?? '1', 10);
+    const page = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+    const offset = (page - 1) * PAGE_SIZE;
+
+    // Get invoices for this user with pagination
     const invoiceList = await db.query.invoices.findMany({
       where: (invoices, { eq }) => eq(invoices.userId, userId),
       orderBy: (invoices, { desc }) => [desc(invoices.invoiceDate)],
-      limit: 100,
+      limit: PAGE_SIZE,
+      offset,
     });
 
     const decrypted = invoiceList.map((inv) => ({
@@ -172,6 +237,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       invoices: decrypted,
+      pagination: { page, pageSize: PAGE_SIZE, hasMore: invoiceList.length === PAGE_SIZE },
     }, { status: 200 });
 
   } catch (error) {

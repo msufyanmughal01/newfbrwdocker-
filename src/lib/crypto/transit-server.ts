@@ -35,12 +35,17 @@ function getServerECDH() {
   if (privHex) {
     _ecdh.setPrivateKey(Buffer.from(privHex, 'hex'));
   } else {
-    _ecdh.generateKeys(); // ephemeral — changes on restart
-    // Log a warning without exposing the private key value
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        '[crypto] ECDH_PRIVATE_KEY_HEX must be set in production. ' +
+        "Generate with: node -e \"const {createECDH}=require('crypto');const e=createECDH('prime256v1');e.generateKeys();console.log(e.getPrivateKey('hex'))\""
+      );
+    }
+    // Development only — ephemeral key (rotates on restart, fine for local dev)
+    _ecdh.generateKeys();
     console.warn(
-      '[crypto] ECDH_PRIVATE_KEY_HEX is not set — using an ephemeral key that changes on restart. ' +
-      'Generate a persistent key with: ' +
-      "node -e \"const {createECDH}=require('crypto');const e=createECDH('prime256v1');e.generateKeys();console.log(e.getPrivateKey('hex'))\""
+      '[crypto] ECDH_PRIVATE_KEY_HEX is not set — using an ephemeral key (dev only). ' +
+      'Set this variable before deploying to production.'
     );
   }
 

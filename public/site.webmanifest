@@ -1,0 +1,36 @@
+{
+  "name": "Easy Digital Invoice — FBR Invoicing for Pakistan",
+  "short_name": "Easy Digital Invoice",
+  "description": "Pakistan's FBR-integrated e-invoicing platform. Generate, validate & submit FBR-compliant invoices with NTN, CNIC, STRN support.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1a3a",
+  "theme_color": "#1d4ed8",
+  "orientation": "portrait-primary",
+  "categories": ["business", "finance", "productivity"],
+  "lang": "en-PK",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Invoice",
+      "short_name": "New Invoice",
+      "description": "Create a new FBR-compliant invoice",
+      "url": "/invoices/new",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your analytics dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
+  ]
+}

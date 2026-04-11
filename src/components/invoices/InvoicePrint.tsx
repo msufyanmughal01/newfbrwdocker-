@@ -26,7 +26,7 @@ export function InvoicePrint({ invoice, lineItems, logoPath }: InvoicePrintProps
       {/* ── Gradient accent bar ── */}
       <div className="invoice-print-accent" style={{ height: 5, background: 'linear-gradient(90deg, #4f46e5 0%, #818cf8 50%, #c084fc 100%)' }} />
 
-      {/* ── HEADER: business logo left | invoice type center | TaxDigital+FBR right ── */}
+      {/* ── HEADER: business logo left | invoice type center | Easy Digital Invoice+FBR right ── */}
       <div className="invoice-print-header" style={{
         background: '#ffffff',
         borderBottom: '1px solid #e2e5ee',
@@ -81,13 +81,13 @@ export function InvoicePrint({ invoice, lineItems, logoPath }: InvoicePrintProps
           <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>{invoice.invoiceDate}</div>
         </div>
 
-        {/* TaxDigital brand + FBR pill */}
+        {/* Easy Digital Invoice brand + FBR pill */}
         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flex: 1 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, color: '#0f1423', letterSpacing: '-0.5px' }}>
-              Tax<span style={{ color: '#4f46e5' }}>Digital</span>
+              Easy<span style={{ color: '#4f46e5' }}>Digital Invoice</span>
             </div>
-            <div style={{ fontSize: 9, color: '#9ca3af', letterSpacing: '0.5px' }}>Intelligent Tax Management</div>
+            <div style={{ fontSize: 9, color: '#9ca3af', letterSpacing: '0.5px' }}>FBR-Compliant Invoicing</div>
           </div>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
@@ -136,7 +136,7 @@ export function InvoicePrint({ invoice, lineItems, logoPath }: InvoicePrintProps
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* Status pill */}
+          {/* Status pill only — QR code moved to bottom-left footer */}
           {invoice.fbrInvoiceNumber ? (
             <span style={{
               background: '#ecfdf5', border: '1px solid #6ee7b7', color: '#065f46',
@@ -149,14 +149,6 @@ export function InvoicePrint({ invoice, lineItems, logoPath }: InvoicePrintProps
               fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
               padding: '4px 12px', borderRadius: 999,
             }}>Draft</span>
-          )}
-
-          {/* QR code */}
-          {invoice.fbrInvoiceNumber && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              <QRCode value={invoice.fbrInvoiceNumber} size={60} />
-              <span style={{ fontSize: 8, color: '#a5b4fc' }}>Scan to verify</span>
-            </div>
           )}
         </div>
       </div>
@@ -324,17 +316,40 @@ export function InvoicePrint({ invoice, lineItems, logoPath }: InvoicePrintProps
       {/* ── FOOTER ── */}
       <div className="invoice-print-footer" style={{
         background: '#f8fafc', borderTop: '1px solid #e2e5ee',
-        padding: '12px 36px',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '16px 36px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
         fontSize: 10, color: '#9ca3af',
       }}>
-        <span style={{ fontWeight: 700, color: '#6b7280' }}>
-          Tax<span style={{ color: '#4f46e5' }}>Digital</span>
-        </span>
-        <span>FBR Digital Invoicing System v1.12 · Pakistan Revenue Service</span>
-        {invoice.fbrInvoiceNumber && (
-          <span style={{ fontFamily: 'monospace' }}>{invoice.fbrInvoiceNumber}</span>
-        )}
+        {/* QR code — bottom left */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
+          {invoice.fbrInvoiceNumber ? (
+            <>
+              <QRCode value={invoice.fbrInvoiceNumber} size={72} />
+              <span style={{ fontSize: 8, color: '#a5b4fc' }}>Scan to verify FBR invoice</span>
+            </>
+          ) : (
+            <span style={{ fontWeight: 700, color: '#6b7280' }}>
+              Tax<span style={{ color: '#4f46e5' }}>Digital</span>
+            </span>
+          )}
+        </div>
+
+        {/* Center branding */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontWeight: 700, color: '#6b7280', marginBottom: 2 }}>
+            Tax<span style={{ color: '#4f46e5' }}>Digital</span>
+          </div>
+          <div>FBR Digital Invoicing System v1.12 · Pakistan Revenue Service</div>
+        </div>
+
+        {/* FBR number — bottom right */}
+        <div style={{ textAlign: 'right' }}>
+          {invoice.fbrInvoiceNumber && (
+            <span style={{ fontFamily: 'monospace', fontSize: 9, color: '#6b7280' }}>
+              {invoice.fbrInvoiceNumber}
+            </span>
+          )}
+        </div>
       </div>
 
     </div>

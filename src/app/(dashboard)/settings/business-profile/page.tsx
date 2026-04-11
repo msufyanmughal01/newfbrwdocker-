@@ -8,7 +8,7 @@ import { getBusinessProfile, upsertBusinessProfile } from '@/lib/settings/busine
 import { BusinessProfileForm } from '@/components/settings/BusinessProfileForm';
 
 export const metadata = {
-  title: 'Business Profile | TaxDigital',
+  title: 'Business Profile | Easy Digital Invoice',
 };
 
 export default async function BusinessProfilePage() {

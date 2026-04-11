@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 
 export const metadata = {
-  title: 'Invoice Detail | TaxDigital',
+  title: 'Invoice Detail | Easy Digital Invoice',
 };
 
 function formatCurrency(val: string | null | undefined): string {

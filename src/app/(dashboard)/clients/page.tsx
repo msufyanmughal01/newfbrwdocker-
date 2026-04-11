@@ -9,7 +9,7 @@ import { ClientsTable } from '@/components/clients/ClientsTable';
 import { ClientExportButton } from '@/components/clients/ClientExportButton';
 
 export const metadata = {
-  title: 'Clients | TaxDigital',
+  title: 'Clients | Easy Digital Invoice',
 };
 
 export default async function ClientsPage() {

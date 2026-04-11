@@ -1,13 +1,13 @@
 #!/bin/bash
-# TaxDigital Database Backup Script
+# Easy Digital Invoice — Database Backup Script
 # Usage: ./scripts/backup.sh
 # Requires: DATABASE_URL env var, pg_dump, AWS CLI (optional for S3)
 
 set -euo pipefail
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_DIR="/opt/taxdigital/backups"
-BACKUP_FILE="${BACKUP_DIR}/taxdigital_${TIMESTAMP}.sql.gz"
+BACKUP_DIR="/opt/easydigital/backups"
+BACKUP_FILE="${BACKUP_DIR}/easydigital_${TIMESTAMP}.sql.gz"
 
 # Load env if .env.production exists
 if [ -f ".env.production" ]; then

@@ -107,9 +107,9 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
       return NextResponse.json({ error: "FBR API timeout — please retry" }, { status: 504 });
     }
 
-    console.error("FBR submit error:", err);
+    console.error("FBR submit error:", err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { error: "FBR submission failed", details: (err as Error).message },
+      { error: "FBR submission failed" },
       { status: 500 }
     );
   }

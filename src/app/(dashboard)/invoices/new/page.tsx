@@ -9,9 +9,11 @@ import { invoiceDrafts } from '@/lib/db/schema/invoices';
 import { eq, and } from 'drizzle-orm';
 import type { InvoiceFormData } from '@/lib/invoices/validation';
 
+export const dynamic = 'force-dynamic'; // always fetch fresh seller profile from DB
+
 export const metadata = {
-  title: 'Create Invoice | TaxDigital',
-  description: 'Create FBR-compliant Sale Invoice or Debit Note',
+  title: 'Create Invoice',
+  description: 'Create a new FBR-compliant Sale Invoice or Debit Note with real-time tax calculation.',
 };
 
 export default async function NewInvoicePage({

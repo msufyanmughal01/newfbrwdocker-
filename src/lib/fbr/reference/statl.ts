@@ -80,23 +80,29 @@ export async function verifyNTN(
   // 3. Call FBR STATL API
   try {
     const dateStr = now.toISOString().split('T')[0];
+    // FBR STATL API (spec section 5.11) returns:
+    // { "status code": "01", "status": "In-Active" }
     const statlResponse = (await fbrSTATL(ntnCnic, dateStr)) as {
       status?: string;
       Active?: boolean;
       statlStatus?: string;
+      'status code'?: string;
     };
+
+    const rawStatus = statlResponse?.status ?? statlResponse?.statlStatus ?? '';
+    const rawStatusCode = statlResponse?.['status code'] ?? '';
 
     let statlStatus: 'active' | 'inactive' | 'unknown' = 'unknown';
     if (
       statlResponse?.Active === true ||
-      statlResponse?.status?.toLowerCase() === 'active' ||
-      statlResponse?.statlStatus?.toLowerCase() === 'active'
+      (rawStatus.toLowerCase() === 'active' && !rawStatus.toLowerCase().includes('in-'))
     ) {
       statlStatus = 'active';
     } else if (
       statlResponse?.Active === false ||
-      statlResponse?.status?.toLowerCase() === 'inactive' ||
-      statlResponse?.statlStatus?.toLowerCase() === 'inactive'
+      rawStatus.toLowerCase().includes('in-active') ||
+      rawStatusCode === '01' ||
+      rawStatusCode === '02'
     ) {
       statlStatus = 'inactive';
     }
@@ -104,16 +110,25 @@ export async function verifyNTN(
     // 4. Call Get_Reg_Type for registration classification
     let registrationType: string | null = null;
     try {
+      // FBR Get_Reg_Type API (spec section 5.12) returns:
+      // { "statuscode": "00", "REGISTRATION_NO": "0788762", "REGISTRATION_TYPE": "Registered" }
       const regTypeResponse = (await fbrGetRegType(ntnCnic)) as {
+        REGISTRATION_TYPE?: string;
         Registration_Type?: string;
         registrationType?: string;
         type?: string;
+        statuscode?: string;
       };
       registrationType =
+        regTypeResponse?.REGISTRATION_TYPE ??
         regTypeResponse?.Registration_Type ??
         regTypeResponse?.registrationType ??
         regTypeResponse?.type ??
         null;
+      // If statuscode is "01" and no registration type was returned, treat as Unregistered
+      if (!registrationType && regTypeResponse?.statuscode === '01') {
+        registrationType = 'Unregistered';
+      }
     } catch {
       // Get_Reg_Type failed — continue without it
     }

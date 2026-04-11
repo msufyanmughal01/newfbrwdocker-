@@ -42,3 +42,9 @@ export type { HSCode, NewHSCode } from "./hs-code-master";
 
 export { bulkInvoiceBatches } from "./bulk-invoices";
 export type { BulkInvoiceBatch, NewBulkInvoiceBatch } from "./bulk-invoices";
+
+export { adminPaymentLogs } from "./admin-payment-logs";
+export type { AdminPaymentLog, NewAdminPaymentLog } from "./admin-payment-logs";
+
+export { auditLogs } from "./audit-log";
+export type { AuditLog, NewAuditLog, AuditAction } from "./audit-log";

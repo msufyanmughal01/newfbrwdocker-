@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
+import { SocialLoginButton } from "./SocialLoginButton";
 
 export function LoginForm() {
   const router = useRouter();
@@ -24,9 +25,17 @@ export function LoginForm() {
         setLoading(false);
         return;
       }
-      router.push("/dashboard");
-    } catch {
-      setError("An unexpected error occurred");
+      // Hard redirect so Next.js re-fetches the server session instead of
+      // serving a cached unauthenticated shell from the client router.
+      window.location.href = "/dashboard";
+      return;
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      if (status === 429) {
+        setError("Too many attempts. Please wait a minute and try again.");
+      } else {
+        setError("An unexpected error occurred");
+      }
       setLoading(false);
     }
   };
@@ -36,7 +45,7 @@ export function LoginForm() {
     border: "1.5px solid #dbeafe",
     borderRadius: "10px",
     padding: "11px 14px",
-    fontSize: "15px",
+    fontSize: "16px", // ≥16px prevents iOS Safari auto-zoom on focus
     color: "#0f172a",
     background: "#f8faff",
     outline: "none",
@@ -51,7 +60,7 @@ export function LoginForm() {
           Welcome back
         </h2>
         <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
-          Sign in to your TaxDigital account
+          Sign in to your Easy Digital Invoice account
         </p>
       </div>
 
@@ -136,11 +145,20 @@ export function LoginForm() {
         {loading ? "Signing in..." : "Sign In →"}
       </button>
 
+      {/* Divider */}
+      <div style={{ display: "flex", alignItems: "center", margin: "20px 0" }}>
+        <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+        <span style={{ padding: "0 12px", fontSize: "12px", color: "#94a3b8", fontWeight: 500 }}>or</span>
+        <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+      </div>
+
+      <SocialLoginButton />
+
       <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: "#64748b" }}>
         Don&apos;t have an account?{" "}
-        <a href="/#contact" style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "none" }}>
-          Contact admin
-        </a>
+        <Link href="/register" style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "none" }}>
+          Create account
+        </Link>
       </p>
     </form>
   );

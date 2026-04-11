@@ -8,6 +8,7 @@ interface User {
   email: string;
   emailVerified: boolean;
   createdAt: Date;
+  provider?: string | null; // 'google' or 'credential'
   // Business info
   businessName?: string | null;
   ntnCnic?: string | null;
@@ -18,6 +19,9 @@ interface User {
   postalCode?: string | null;
   fbrTokenHint?: string | null;
   logoPath?: string | null;
+  planSlug?: string | null;
+  planActivatedAt?: Date | null;
+  billingCycleStart?: Date | null;
   // Personal info
   fatherName?: string | null;
   cnic?: string | null;
@@ -25,12 +29,6 @@ interface User {
   gender?: string | null;
   emergencyContact?: string | null;
   notes?: string | null;
-}
-
-interface CreatedCredentials {
-  name: string;
-  email: string;
-  password: string;
 }
 
 interface Props {
@@ -88,6 +86,126 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+function LogPaymentPanel({ userId }: { userId: string }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    paidAt: new Date().toISOString().split("T")[0],
+    amount: "",
+    planSlug: "growth",
+    durationMonths: "1",
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const inp2: React.CSSProperties = {
+    width: "100%", background: "var(--surface)",
+    border: "1px solid var(--border)", borderRadius: "8px",
+    padding: "9px 12px", color: "var(--foreground)",
+    fontSize: "13px", outline: "none", boxSizing: "border-box",
+  };
+
+  const handleLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.amount || isNaN(Number(form.amount))) { setMsg("Error: Enter a valid amount."); return; }
+    setSaving(true); setMsg("");
+    try {
+      const res = await fetch("/api/admin/log-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          paidAt: form.paidAt,
+          amount: parseInt(form.amount),
+          planSlug: form.planSlug,
+          durationMonths: parseInt(form.durationMonths),
+          notes: form.notes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setMsg(`Error: ${data.error || "Failed"}`); return; }
+      setMsg("Payment logged successfully.");
+      setForm(prev => ({ ...prev, amount: "", notes: "" }));
+    } catch { setMsg("Error: Network error."); } finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{
+      border: "1px solid var(--border)", borderRadius: "10px",
+      marginBottom: "20px", overflow: "hidden",
+    }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 16px", background: "var(--surface-2)",
+          border: "none", cursor: "pointer", fontSize: "13px", fontWeight: 700,
+          color: "var(--foreground)", textAlign: "left",
+        }}
+      >
+        <span>💳 Log Manual Payment</span>
+        <span>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <form onSubmit={handleLog} style={{ padding: "16px", display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "4px", textTransform: "uppercase" }}>Paid At</label>
+              <input type="date" style={inp2} value={form.paidAt}
+                onChange={e => setForm(p => ({ ...p, paidAt: e.target.value }))} required />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "4px", textTransform: "uppercase" }}>Amount (PKR)</label>
+              <input type="number" style={inp2} value={form.amount} placeholder="5000"
+                onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} required min="1" />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "4px", textTransform: "uppercase" }}>Plan</label>
+              <select style={inp2} value={form.planSlug}
+                onChange={e => setForm(p => ({ ...p, planSlug: e.target.value }))}>
+                <option value="standard">Standard (Free)</option>
+                <option value="growth">Growth (Rs 5,000)</option>
+                <option value="pro">Pro (Rs 12,000)</option>
+                <option value="unlimited">Unlimited (Rs 15,000)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "4px", textTransform: "uppercase" }}>Duration (Months)</label>
+              <input type="number" style={inp2} value={form.durationMonths}
+                onChange={e => setForm(p => ({ ...p, durationMonths: e.target.value }))} min="1" max="24" />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--foreground-muted)", marginBottom: "4px", textTransform: "uppercase" }}>Notes (optional)</label>
+            <input type="text" style={inp2} value={form.notes} placeholder="e.g. Bank transfer, receipt no. 123"
+              onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+          </div>
+          {msg && (
+            <div style={{
+              padding: "8px 12px", borderRadius: "6px",
+              background: msg.startsWith("Error") ? "var(--error-bg, #fef2f2)" : "var(--positive-bg, #f0fdf4)",
+              border: `1px solid ${msg.startsWith("Error") ? "#fca5a5" : "#86efac"}`,
+              color: msg.startsWith("Error") ? "#dc2626" : "#16a34a",
+              fontSize: "12px",
+            }}>
+              {msg}
+            </div>
+          )}
+          <button type="submit" disabled={saving} style={{
+            background: saving ? "#93c5fd" : "#1d4ed8", color: "#fff",
+            border: "none", borderRadius: "8px", padding: "9px 18px",
+            fontSize: "13px", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer",
+            width: "fit-content",
+          }}>
+            {saving ? "Logging..." : "Log Payment"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 function EditUserPanel({
   user,
   onClose,
@@ -107,6 +225,11 @@ function EditUserPanel({
     city: user.city ?? "",
     postalCode: user.postalCode ?? "",
     fbrToken: "",
+    // Plan
+    planSlug: user.planSlug ?? "standard",
+    billingCycleStart: user.billingCycleStart
+      ? new Date(user.billingCycleStart).toISOString().split("T")[0]
+      : "",
     // Personal
     fatherName: user.fatherName ?? "",
     cnic: user.cnic ?? "",
@@ -171,6 +294,7 @@ function EditUserPanel({
         notes: form.notes || null,
         fbrTokenHint: form.fbrToken ? form.fbrToken.slice(-4) : user.fbrTokenHint,
         logoPath: logoPreview,
+        planSlug: form.planSlug || "standard",
       });
     } catch { setMsg("Error: Network error."); } finally { setSaving(false); }
   };
@@ -356,6 +480,59 @@ function EditUserPanel({
               value={form.notes} onChange={f("notes")} placeholder="Internal notes about this user…" />
           </div>
 
+          {/* ── Subscription Plan ─────────────────── */}
+          <SectionHeader title="Subscription Plan" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "14px" }}>
+            {[
+              { slug: "standard",  name: "Standard",  limit: "3 invoices/month",        price: "Free",           color: "#16a34a" },
+              { slug: "growth",    name: "Growth",    limit: "20 invoices/month",        price: "PKR 5,000/mo",   color: "#2563eb" },
+              { slug: "pro",       name: "Pro",       limit: "100 invoices/month",       price: "PKR 12,000/mo",  color: "#7c3aed" },
+              { slug: "unlimited", name: "Unlimited", limit: "Unlimited invoices/month", price: "PKR 15,000/mo",  color: "#0f172a" },
+            ].map(plan => {
+              const selected = form.planSlug === plan.slug;
+              return (
+                <label key={plan.slug} style={{
+                  display: "flex", alignItems: "flex-start", gap: "10px",
+                  padding: "12px 14px", borderRadius: "10px", cursor: "pointer",
+                  border: `2px solid ${selected ? plan.color : "var(--border)"}`,
+                  background: selected ? `${plan.color}12` : "var(--surface-2)",
+                  transition: "all 0.15s",
+                }}>
+                  <input
+                    type="radio" name="planSlug" value={plan.slug}
+                    checked={selected}
+                    onChange={f("planSlug")}
+                    style={{ marginTop: "2px", accentColor: plan.color }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "13px", color: selected ? plan.color : "var(--foreground)" }}>
+                      {plan.name}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--foreground-muted)", marginTop: "2px" }}>{plan.limit}</div>
+                    <div style={{ fontSize: "11px", color: "var(--foreground-subtle)" }}>{plan.price}</div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+
+          {/* Billing Cycle Start */}
+          <div style={{ marginBottom: "14px" }}>
+            <label style={lbl}>Billing Cycle Start Date</label>
+            <input
+              style={{ ...inp, maxWidth: "220px" }}
+              type="date"
+              value={form.billingCycleStart}
+              onChange={f("billingCycleStart")}
+            />
+            <p style={{ fontSize: "11px", color: "var(--foreground-subtle)", margin: "4px 0 0" }}>
+              Day-of-month anchor for invoice quota resets. Leave blank to use 1st of month.
+            </p>
+          </div>
+
+          {/* Log Payment Sub-panel */}
+          <LogPaymentPanel userId={user.id} />
+
           {/* ── FBR Token ─────────────────────────── */}
           <SectionHeader title="FBR API Token" />
           <div style={{ marginBottom: "4px" }}>
@@ -387,8 +564,9 @@ function EditUserPanel({
             </p>
           </div>
 
-          {/* ── Password ──────────────────────────── */}
-          <SectionHeader title="Account Password" />
+          {/* ── Password (only for email/credential users) ──────────────────────────── */}
+          {user.provider !== "google" && (
+          <><SectionHeader title="Account Password" />
           <div style={{ padding: "16px", background: "var(--surface-2)", borderRadius: "10px", border: "1px solid var(--border)", marginBottom: "4px" }}>
             <div style={{ marginBottom: "12px" }}>
               <label style={lbl}>Current Password</label>
@@ -442,6 +620,7 @@ function EditUserPanel({
               </button>
             </div>
           </div>
+          </>)}
 
           {/* ── Feedback + Actions ────────────────── */}
           {msg && (
@@ -482,57 +661,9 @@ function EditUserPanel({
 
 export function AdminDashboardClient({ users: initialUsers }: Props) {
   const [users, setUsers] = useState<User[]>(initialUsers);
-
-  // Create form state
-  const [cf, setCf] = useState({
-    name: "", email: "", password: "",
-    businessName: "", ntnCnic: "", phone: "",
-    fatherName: "", cnic: "", province: "",
-    address: "", city: "", postalCode: "",
-    dateOfBirth: "", gender: "", emergencyContact: "", notes: "",
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [created, setCreated] = useState<CreatedCredentials | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-
-  const inp: React.CSSProperties = {
-    width: "100%", background: "var(--surface-2)",
-    border: "1px solid var(--border)", borderRadius: "9px",
-    padding: "10px 13px", color: "var(--foreground)",
-    fontSize: "14px", outline: "none", boxSizing: "border-box", transition: "border-color 0.15s",
-  };
-  const lbl: React.CSSProperties = {
-    display: "block", fontSize: "12px", fontWeight: 700,
-    color: "var(--foreground-muted)", marginBottom: "5px",
-    textTransform: "uppercase", letterSpacing: "0.05em",
-  };
-  const fc = (key: keyof typeof cf) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setCf(prev => ({ ...prev, [key]: e.target.value }));
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true); setError(""); setCreated(null);
-    try {
-      const res = await fetch("/api/admin/create-user-secret", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...cf }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Failed to create user"); return; }
-      setCreated(data.credentials);
-      setCf({ name: "", email: "", password: "", businessName: "", ntnCnic: "", phone: "", fatherName: "", cnic: "", province: "", address: "", city: "", postalCode: "", dateOfBirth: "", gender: "", emergencyContact: "", notes: "" });
-      window.location.reload();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDelete = async (userId: string) => {
     setDeleting(userId);
@@ -550,10 +681,6 @@ export function AdminDashboardClient({ users: initialUsers }: Props) {
     background: "var(--surface)", border: "1px solid var(--border)",
     borderRadius: "16px", padding: "28px",
     boxShadow: "var(--shadow-sm)", marginBottom: "24px",
-  };
-
-  const grid2: React.CSSProperties = {
-    display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px",
   };
 
   return (
@@ -600,7 +727,7 @@ export function AdminDashboardClient({ users: initialUsers }: Props) {
             background: "rgba(255,255,255,0.1)", borderRadius: "8px",
             padding: "4px 12px", fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 600,
           }}>
-            {users.length} {users.length === 1 ? "User" : "Users"}
+            {users.length} {users.length === 1 ? "User" : "Users"} · {users.filter(u => u.provider === "google").length}G · {users.filter(u => u.provider !== "google").length}E
           </div>
           <button
             onClick={async () => {
@@ -621,9 +748,11 @@ export function AdminDashboardClient({ users: initialUsers }: Props) {
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "28px 16px" }}>
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", marginBottom: "24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "14px", marginBottom: "24px" }}>
           {[
             { label: "Total Users", value: users.length, color: "var(--primary)" },
+            { label: "Google Sign Up", value: users.filter(u => u.provider === "google").length, color: "#d97706" },
+            { label: "Email Sign Up", value: users.filter(u => u.provider !== "google").length, color: "#0369a1" },
             { label: "Verified", value: users.filter(u => u.emailVerified).length, color: "var(--positive)" },
             { label: "Pending", value: users.filter(u => !u.emailVerified).length, color: "var(--warning)" },
           ].map(stat => (
@@ -634,172 +763,6 @@ export function AdminDashboardClient({ users: initialUsers }: Props) {
           ))}
         </div>
 
-        {/* Create User Form */}
-        <div style={card}>
-          <h2 style={{ fontSize: "15px", fontWeight: 700, color: "var(--foreground)", marginBottom: "4px", marginTop: 0 }}>
-            Create New User
-          </h2>
-          <form onSubmit={handleCreate}>
-
-            {/* Account */}
-            <SectionHeader title="Account (Required)" />
-            <div style={grid2}>
-              <div>
-                <label style={lbl}>Full Name *</label>
-                <input style={inp} value={cf.name} onChange={fc("name")} placeholder="Ahmad Khan" required />
-              </div>
-              <div>
-                <label style={lbl}>Email Address *</label>
-                <input style={inp} type="email" value={cf.email} onChange={fc("email")} placeholder="ahmad@company.com" required />
-              </div>
-            </div>
-            <div style={{ marginBottom: "14px" }}>
-              <label style={lbl}>Password *</label>
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <input
-                  style={{ ...inp, paddingRight: "160px" }}
-                  type={showPassword ? "text" : "password"}
-                  value={cf.password}
-                  onChange={fc("password")}
-                  placeholder="Min 8 characters"
-                  required minLength={8}
-                />
-                <div style={{ position: "absolute", right: "8px", display: "flex", gap: "4px" }}>
-                  <button type="button" onClick={() => setShowPassword(v => !v)}
-                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "6px", padding: "4px 8px", cursor: "pointer", fontSize: "13px", color: "var(--foreground-muted)" }}>
-                    {showPassword ? "🙈" : "👁"}
-                  </button>
-                  <button type="button" onClick={() => setCf(p => ({ ...p, password: generatePassword() }))}
-                    style={{ background: "var(--primary-subtle)", border: "1px solid var(--border)", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", fontSize: "11px", fontWeight: 700, color: "var(--primary)", whiteSpace: "nowrap" }}>
-                    Generate
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Business Info */}
-            <SectionHeader title="Business Information (Optional)" />
-            <div style={grid2}>
-              <div>
-                <label style={lbl}>Business Name</label>
-                <input style={inp} value={cf.businessName} onChange={fc("businessName")} placeholder="Khan Enterprises Ltd" />
-              </div>
-              <div>
-                <label style={lbl}>NTN / Business CNIC</label>
-                <input style={inp} value={cf.ntnCnic} onChange={fc("ntnCnic")} placeholder="7-digit NTN or 13-digit CNIC" maxLength={13} />
-              </div>
-              <div>
-                <label style={lbl}>Phone Number</label>
-                <input style={inp} value={cf.phone} onChange={fc("phone")} placeholder="+92 300 0000000" />
-              </div>
-              <div>
-                <label style={lbl}>Province</label>
-                <select style={inp} value={cf.province} onChange={fc("province")}>
-                  <option value="">Select province…</option>
-                  {FBR_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={lbl}>City</label>
-                <input style={inp} value={cf.city} onChange={fc("city")} placeholder="Lahore" />
-              </div>
-              <div>
-                <label style={lbl}>Postal Code</label>
-                <input style={inp} value={cf.postalCode} onChange={fc("postalCode")} placeholder="54000" />
-              </div>
-            </div>
-            <div style={{ marginBottom: "14px" }}>
-              <label style={lbl}>Business Address</label>
-              <textarea style={{ ...inp, resize: "none" } as React.CSSProperties} rows={2}
-                value={cf.address} onChange={fc("address")} placeholder="Street address, city, postal code" />
-            </div>
-
-            {/* Personal Info */}
-            <SectionHeader title="Personal Information (Optional)" />
-            <div style={grid2}>
-              <div>
-                <label style={lbl}>Father Name</label>
-                <input style={inp} value={cf.fatherName} onChange={fc("fatherName")} placeholder="Muhammad Khan" />
-              </div>
-              <div>
-                <label style={lbl}>Personal CNIC</label>
-                <input style={inp} value={cf.cnic} onChange={fc("cnic")} placeholder="13-digit CNIC" maxLength={13} />
-              </div>
-              <div>
-                <label style={lbl}>Date of Birth</label>
-                <input style={inp} type="date" value={cf.dateOfBirth} onChange={fc("dateOfBirth")} />
-              </div>
-              <div>
-                <label style={lbl}>Gender</label>
-                <select style={inp} value={cf.gender} onChange={fc("gender")}>
-                  <option value="">Select…</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label style={lbl}>Emergency Contact</label>
-                <input style={inp} value={cf.emergencyContact} onChange={fc("emergencyContact")} placeholder="+92 300 0000000" />
-              </div>
-            </div>
-            <div style={{ marginBottom: "20px" }}>
-              <label style={lbl}>Admin Notes</label>
-              <textarea style={{ ...inp, resize: "none" } as React.CSSProperties} rows={2}
-                value={cf.notes} onChange={fc("notes")} placeholder="Internal notes…" />
-            </div>
-
-            {error && (
-              <div style={{ background: "var(--error-bg)", border: "1px solid var(--error)", borderRadius: "8px", padding: "10px 14px", marginBottom: "14px", fontSize: "13px", color: "var(--error)" }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={!cf.name || !cf.email || !cf.password || loading}
-              style={{
-                background: (!cf.name || !cf.email || !cf.password || loading) ? "var(--border)" : "var(--primary)",
-                color: (!cf.name || !cf.email || !cf.password || loading) ? "var(--foreground-muted)" : "white",
-                border: "none", borderRadius: "9px",
-                padding: "10px 24px", fontSize: "14px", fontWeight: 700,
-                cursor: (!cf.name || !cf.email || !cf.password || loading) ? "not-allowed" : "pointer",
-                transition: "all 0.2s",
-              }}
-            >
-              {loading ? "Creating..." : "Create Account →"}
-            </button>
-          </form>
-        </div>
-
-        {/* Credentials Card */}
-        {created && (
-          <div style={{
-            background: "var(--positive-bg)", border: "1px solid var(--positive)",
-            borderRadius: "14px", padding: "24px", marginBottom: "24px",
-          }}>
-            <p style={{ color: "var(--positive)", fontWeight: 700, fontSize: "14px", marginTop: 0, marginBottom: "16px" }}>
-              ✓ User created — share these credentials securely
-            </p>
-            {[
-              { label: "Name", value: created.name },
-              { label: "Email", value: created.email },
-              { label: "Password", value: created.password },
-            ].map(row => (
-              <div key={row.label} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "10px 0", borderBottom: "1px solid var(--border)",
-              }}>
-                <span style={{ fontSize: "12px", color: "var(--positive)", fontWeight: 700, width: "80px" }}>{row.label}</span>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, justifyContent: "space-between" }}>
-                  <span style={{ fontFamily: "monospace", fontSize: "14px", color: "var(--foreground)" }}>{row.value}</span>
-                  <CopyButton text={row.value ?? ""} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Users Table */}
         <div style={card}>
           <h2 style={{ fontSize: "15px", fontWeight: 700, color: "var(--foreground)", marginBottom: "20px", marginTop: 0 }}>
@@ -809,7 +772,7 @@ export function AdminDashboardClient({ users: initialUsers }: Props) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "var(--surface-2)" }}>
-                  {["Name / Email", "Business", "Father Name", "CNIC", "NTN/Tax CNIC", "City", "FBR Token", "Status", "Joined", "Actions"].map(h => (
+                  {["Name / Email", "Sign Up", "Business", "Plan", "Father Name", "CNIC", "NTN/Tax CNIC", "City", "FBR Token", "Status", "Joined", "Actions"].map(h => (
                     <th key={h} style={{
                       textAlign: "left", fontSize: "11px", fontWeight: 700,
                       color: "var(--foreground-muted)", textTransform: "uppercase",
@@ -838,9 +801,53 @@ export function AdminDashboardClient({ users: initialUsers }: Props) {
                         </div>
                       </div>
                     </td>
+                    <td style={{ padding: "12px", whiteSpace: "nowrap" }}>
+                      {u.provider === "google" ? (
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: "4px",
+                          fontSize: "11px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px",
+                          background: "#fef3c718", color: "#d97706", border: "1px solid #d9770655",
+                        }}>
+                          <svg width="11" height="11" viewBox="0 0 18 18" fill="none">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                          </svg>
+                          Google
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: "11px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px",
+                          background: "#e0f2fe", color: "#0369a1", border: "1px solid #0369a155",
+                        }}>
+                          Email
+                        </span>
+                      )}
+                    </td>
                     <td style={{ padding: "12px", fontSize: "13px", color: "var(--foreground-muted)" }}>
                       <div>{u.businessName || <span style={{ color: "var(--border-strong)" }}>—</span>}</div>
                       {u.province && <div style={{ fontSize: "11px", color: "var(--foreground-subtle)" }}>{u.province}</div>}
+                    </td>
+                    <td style={{ padding: "12px", whiteSpace: "nowrap" }}>
+                      {(() => {
+                        const planColors: Record<string, string> = {
+                          standard: "#16a34a",
+                          growth: "#2563eb",
+                          pro: "#7c3aed",
+                          unlimited: "#0f172a",
+                        };
+                        const slug = u.planSlug ?? "standard";
+                        const color = planColors[slug] ?? "#16a34a";
+                        const label = slug.charAt(0).toUpperCase() + slug.slice(1);
+                        return (
+                          <span style={{
+                            fontSize: "11px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px",
+                            background: `${color}18`, color, border: `1px solid ${color}55`,
+                            whiteSpace: "nowrap",
+                          }}>{label}</span>
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: "12px", fontSize: "13px", color: "var(--foreground-muted)" }}>
                       {u.fatherName || <span style={{ color: "var(--border-strong)" }}>—</span>}

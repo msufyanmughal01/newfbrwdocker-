@@ -12,7 +12,7 @@ interface HSCodeEntry {
 /** Search HS codes by query string (code prefix or description substring). */
 export async function searchHSCodes(query: string, userId?: string): Promise<{ results: HSCodeEntry[]; cached: boolean }> {
   let wasCached = true;
-  const cacheKey = `hs_codes:${userId ?? 'default'}`;
+  const cacheKey = `hs_codes:global`;
 
   const all = await getOrFetch<HSCodeEntry[]>(
     cacheKey,

@@ -6,10 +6,59 @@ import { Header } from "@/components/dashboard/Header";
 
 interface DashboardShellProps {
   userName: string;
+  isSandbox?: boolean;
   children: React.ReactNode;
 }
 
-export function DashboardShell({ userName, children }: DashboardShellProps) {
+export function DashboardShell({ userName, isSandbox = false, children }: DashboardShellProps) {
+
+  // Blank the page immediately if restored from bfcache — prevents any flash
+  // of authenticated content while the session check is in flight.
+  const [visible, setVisible] = useState(false);
+
+  // Detect bfcache restores (browser Back/Forward after logout).
+  // When event.persisted is true the page was served from bfcache — no server
+  // request was made, so proxy auth checks never ran. We ping the session API
+  // and redirect to /login if the session is gone.
+  useEffect(() => {
+    // Mark visible immediately for normal (non-bfcache) loads.
+    setVisible(true);
+
+    const checkSession = async (hideFirst: boolean) => {
+      if (hideFirst) setVisible(false);
+      try {
+        const res = await fetch("/api/auth/get-session", { credentials: "include", cache: "no-store" });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.user) {
+          window.location.replace("/login");
+        } else {
+          setVisible(true);
+        }
+      } catch {
+        window.location.replace("/login");
+      }
+    };
+
+    // bfcache restore (desktop browsers / some mobile).
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) checkSession(true);
+    };
+
+    // Tab focus / app foreground (mobile browsers, PWA, tab switching).
+    // This catches Next.js client-side router cache restores where pageshow
+    // never fires with e.persisted = true.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") checkSession(false);
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   // SSR-safe default: server always renders with sidebar open (true).
   // useEffect will correct this instantly (no transition) on the client.
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -24,7 +73,7 @@ export function DashboardShell({ userName, children }: DashboardShellProps) {
 
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 1024px)");
-    const tabletOrMobileQuery = window.matchMedia("(max-width: 767px)");
+    const tabletOrMobileQuery = window.matchMedia("(max-width: 1023px)");
 
     // Immediately correct state to match the actual viewport — no animation yet.
     setIsSidebarOpen(desktopQuery.matches);
@@ -52,19 +101,22 @@ export function DashboardShell({ userName, children }: DashboardShellProps) {
   }, []);
 
   return (
-    <div className="flex h-screen">
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onToggle={toggleSidebar}
-        isMobileOpen={isMobileOpen}
-        onMobileClose={handleMobileClose}
-        transitionsEnabled={transitionsEnabled}
-      />
-      <div className="flex flex-1 flex-col min-w-0">
-        <Header userName={userName} onMobileMenuToggle={handleMobileMenuToggle} />
-        <main className="flex-1 overflow-auto bg-transparent p-4 sm:p-6">
-          {children}
-        </main>
+    <div className="flex h-screen flex-col" style={{ visibility: visible ? "visible" : "hidden" }}>
+      <div className="flex flex-1 min-h-0">
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onToggle={toggleSidebar}
+          isMobileOpen={isMobileOpen}
+          onMobileClose={handleMobileClose}
+          transitionsEnabled={transitionsEnabled}
+          isSandbox={isSandbox}
+        />
+        <div className="flex flex-1 flex-col min-w-0">
+          <Header userName={userName} onMobileMenuToggle={handleMobileMenuToggle} />
+          <main className="flex-1 overflow-auto bg-transparent p-4 sm:p-6">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

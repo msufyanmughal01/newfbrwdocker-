@@ -1,11 +1,13 @@
 // T049: FBR tax rates reference service (SaleTypeToRate) — cached 24h
+// FBR API (spec section 5.8) returns a flat array:
+// [{ "ratE_ID": 734, "ratE_DESC": "18% along with rupees 60 per kilogram", "ratE_VALUE": 18 }, ...]
 import { fbrGet } from '../api-client';
 import { getOrFetch } from './cache';
 
 interface FBRSaleTypeRate {
-  rate_id: string;
-  rate_label: string;
-  tax_rate: number | null;
+  ratE_ID: number;
+  ratE_DESC: string;
+  ratE_VALUE: number;
 }
 
 export interface TaxRateOption {
@@ -13,24 +15,32 @@ export interface TaxRateOption {
   label: string;
 }
 
-export async function getFBRTaxRates(date?: string, userId?: string): Promise<TaxRateOption[]> {
+export async function getFBRTaxRates(
+  date?: string,
+  userId?: string,
+  transTypeId?: number,
+  provinceCode?: number
+): Promise<TaxRateOption[]> {
   const cacheDate = date ?? new Date().toISOString().split('T')[0];
-  const cacheKey = `fbr:tax-rates:${cacheDate}:${userId ?? 'default'}`;
+  const cacheKey = `fbr:tax-rates:${cacheDate}:${transTypeId ?? ''}:${provinceCode ?? ''}:${userId ?? 'default'}`;
 
   return getOrFetch(
     cacheKey,
     'tax_rates',
     async () => {
-      const raw = await fbrGet(
-        `/pdi/v2/SaleTypeToRate?date=${cacheDate}&transTypeId=&originationSupplier=`,
-        userId
-      );
-      const data = raw as { data?: FBRSaleTypeRate[] };
-      const rates = (data.data ?? []).map((r) => ({
-        id: r.rate_id,
-        label: r.rate_label,
+      const params = new URLSearchParams({ date: cacheDate });
+      if (transTypeId !== undefined) params.set('transTypeId', String(transTypeId));
+      if (provinceCode !== undefined) params.set('originationSupplier', String(provinceCode));
+      const raw = await fbrGet(`/pdi/v2/SaleTypeToRate?${params.toString()}`, userId);
+      const rates = (raw as FBRSaleTypeRate[]).map((r) => ({
+        id: String(r.ratE_ID),
+        label: r.ratE_DESC,
       }));
-      return rates.length > 0 ? rates : getDefaultRates();
+      if (rates.length === 0) {
+        console.warn('[FBR] SaleTypeToRate returned empty array — falling back to default rates');
+        return getDefaultRates();
+      }
+      return rates;
     },
     24
   );

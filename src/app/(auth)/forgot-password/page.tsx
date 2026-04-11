@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
+
+export const metadata: Metadata = {
+  title: "Forgot Password",
+  description: "Reset your Easy Digital Invoice account password to regain access to your FBR invoicing dashboard.",
+  robots: { index: false, follow: false },
+};
 
 export default function ForgotPasswordPage() {
   return (

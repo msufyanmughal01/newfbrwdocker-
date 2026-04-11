@@ -154,7 +154,7 @@ export function BulkInvoiceClient({ recentBatches: initialBatches }: Props) {
     const ws = XLSX.utils.json_to_sheet(data, { header: TEMPLATE_COLUMNS });
     ws["!cols"] = TEMPLATE_COLUMNS.map(() => ({ wch: 22 }));
     XLSX.utils.book_append_sheet(wb, ws, "Invoices");
-    XLSX.writeFile(wb, "taxdigital-bulk-template.xlsx");
+    XLSX.writeFile(wb, "easydigitalinvoice-bulk-template.xlsx");
     setStep(2);
   }
 

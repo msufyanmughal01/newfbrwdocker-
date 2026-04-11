@@ -12,7 +12,7 @@ import { InvoicePrint } from '@/components/invoices/InvoicePrint';
 import { PrintActions } from '@/components/invoices/PrintActions';
 
 export const metadata = {
-  title: 'Print Invoice | TaxDigital',
+  title: 'Print Invoice | Easy Digital Invoice',
 };
 
 export default async function PrintInvoicePage({

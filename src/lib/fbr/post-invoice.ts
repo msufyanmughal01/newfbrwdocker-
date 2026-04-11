@@ -50,9 +50,10 @@ export class FBRSubmissionError extends Error {
  */
 export async function postToFBR(
   payload: FBRInvoicePayload,
-  userId?: string
+  userId?: string,
+  envOverride?: string
 ): Promise<FBRPostResponse> {
-  const raw = (await fbrPost('postinvoicedata', payload, userId)) as FBRRawPostResponse;
+  const raw = (await fbrPost('postinvoicedata', payload, userId, envOverride)) as FBRRawPostResponse;
 
   // A successful post always contains an invoiceNumber.
   // Status details live inside validationResponse, not at the root.

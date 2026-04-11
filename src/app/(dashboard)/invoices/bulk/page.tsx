@@ -7,7 +7,7 @@ import { eq, desc } from "drizzle-orm";
 import { BulkInvoiceClient } from "./bulk-client";
 
 export const metadata = {
-  title: "Bulk Invoice Upload | TaxDigital",
+  title: "Bulk Invoice Upload | Easy Digital Invoice",
 };
 
 export default async function BulkInvoicePage() {

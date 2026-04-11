@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM_EMAIL = "TaxDigital <onboarding@resend.dev>";
+const FROM_EMAIL = "Easy Digital Invoice <onboarding@resend.dev>";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -46,7 +46,7 @@ export async function sendInvitationEmail({
     subject: `You've been invited to join ${organizationName}`,
     html: `
       <h2>Organization Invitation</h2>
-      <p>${inviterName} (${inviterEmail}) has invited you to join <strong>${organizationName}</strong> on TaxDigital.</p>
+      <p>${inviterName} (${inviterEmail}) has invited you to join <strong>${organizationName}</strong> on Easy Digital Invoice.</p>
       <a href="${inviteLink}">Accept Invitation</a>
       <p>If you did not expect this invitation, you can ignore this email.</p>
     `,

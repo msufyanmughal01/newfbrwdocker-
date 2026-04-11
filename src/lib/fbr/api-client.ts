@@ -57,8 +57,13 @@ async function resolveToken(userId?: string): Promise<string> {
         }
         return decrypt(encrypted);
       }
-    } catch {
-      // Fall through to env var
+    } catch (err) {
+      // Re-throw known error codes — do NOT silently fall through to the shared
+      // env-var token when the user's token is expired or explicitly missing.
+      const code = (err as Error & { code?: string }).code;
+      if (code === 'FBR_TOKEN_EXPIRED' || code === 'FBR_TOKEN_MISSING') throw err;
+      // Unexpected DB / decryption errors: fall through to env var so the app
+      // degrades gracefully rather than returning a 500 for every request.
     }
   }
 
@@ -73,17 +78,17 @@ async function resolveToken(userId?: string): Promise<string> {
 }
 
 
-function getEnv(): FBREnv {
-  const env = process.env.FBR_ENV ?? 'sandbox';
+function getEnv(envOverride?: string): FBREnv {
+  const env = envOverride ?? process.env.FBR_ENV ?? 'sandbox';
   return env === 'production' ? 'production' : 'sandbox';
 }
 
-function getBaseUrl(): string {
-  return BASE_URLS[getEnv()];
+function getBaseUrl(envOverride?: string): string {
+  return BASE_URLS[getEnv(envOverride)];
 }
 
-function isSandbox(): boolean {
-  return getEnv() === 'sandbox';
+function isSandbox(envOverride?: string): boolean {
+  return getEnv(envOverride) === 'sandbox';
 }
 
 /**
@@ -145,10 +150,11 @@ async function fbrFetch(
   path: string,
   options: RequestInit = {},
   timeoutMs = 30_000,
-  userId?: string
+  userId?: string,
+  envOverride?: string
 ): Promise<unknown> {
   const token = await resolveToken(userId);
-  const url = `${getBaseUrl()}${path}`;
+  const url = `${getBaseUrl(envOverride)}${path}`;
 
   const maxRetries = 2;
   let lastErr: unknown;
@@ -158,10 +164,11 @@ async function fbrFetch(
       return await fbrFetchOnce(url, options, timeoutMs, token);
     } catch (err) {
       lastErr = err;
-      // Retry only on 5xx or timeout, not on 4xx
+      // Retry only on 5xx or 504 (timeout converted to FBRApiError above). 4xx errors are not retried.
+      // Note: raw AbortError is already converted to FBRApiError(504) in fbrFetchOnce,
+      // so the AbortError branch here can never be reached and is intentionally omitted.
       const isRetryable =
-        (err instanceof FBRApiError && (err.statusCode >= 500 || err.statusCode === 504)) ||
-        (err instanceof Error && err.name === 'AbortError');
+        err instanceof FBRApiError && (err.statusCode >= 500 || err.statusCode === 504);
       if (!isRetryable || attempt === maxRetries) throw err;
       // Exponential backoff: 1s, 2s
       await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
@@ -178,14 +185,16 @@ async function fbrFetch(
 export async function fbrPost(
   path: 'validateinvoicedata' | 'postinvoicedata',
   payload: unknown,
-  userId?: string
+  userId?: string,
+  envOverride?: string
 ): Promise<unknown> {
-  const suffix = isSandbox() ? '_sb' : '';
+  const suffix = isSandbox(envOverride) ? '_sb' : '';
   return fbrFetch(
-    `${SUBMIT_PATHS[getEnv()]}/${path}${suffix}`,
+    `${SUBMIT_PATHS[getEnv(envOverride)]}/${path}${suffix}`,
     { method: 'POST', body: JSON.stringify(payload) },
     30_000,
-    userId
+    userId,
+    envOverride
   );
 }
 

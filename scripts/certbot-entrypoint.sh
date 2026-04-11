@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # certbot-entrypoint.sh — Certbot renewal daemon
 #
-# Runs inside the taxdigital-certbot container.
+# Runs inside the easydigital-certbot container.
 # Checks for certificate renewal every 12 hours.
 # After successful renewal, reloads nginx via docker exec (requires
 # /var/run/docker.sock to be mounted into this container).
@@ -15,7 +15,7 @@
 
 set -e
 
-NGINX_CONTAINER="taxdigital-nginx"
+NGINX_CONTAINER="easydigital-nginx"
 CHECK_INTERVAL_SECONDS=43200   # 12 hours
 
 # ── Install docker CLI for the deploy hook ─────────────────────────────────

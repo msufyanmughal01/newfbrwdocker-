@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/db';
 import { invoices } from '@/lib/db/schema/invoices';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 
 export interface DashboardMetrics {
   totalInvoices: number;
@@ -16,6 +16,49 @@ export interface TrendDataPoint {
   date: string;       // YYYY-MM-DD or YYYY-MM depending on range
   invoiceCount: number;
   revenue: string;
+}
+
+export interface RecentInvoice {
+  id: string;
+  invoiceDate: string;
+  buyerBusinessName: string;
+  grandTotal: string;
+  status: string;
+  invoiceType: string;
+  isSandbox: boolean;
+  fbrInvoiceNumber: string | null;
+}
+
+/**
+ * Fetch the N most recently created invoices for the user (all statuses).
+ */
+export async function getRecentInvoices(userId: string, limit = 6): Promise<RecentInvoice[]> {
+  const result = await db
+    .select({
+      id: invoices.id,
+      invoiceDate: invoices.invoiceDate,
+      buyerBusinessName: invoices.buyerBusinessName,
+      grandTotal: invoices.grandTotal,
+      status: invoices.status,
+      invoiceType: invoices.invoiceType,
+      isSandbox: invoices.isSandbox,
+      fbrInvoiceNumber: invoices.fbrInvoiceNumber,
+    })
+    .from(invoices)
+    .where(eq(invoices.userId, userId))
+    .orderBy(desc(invoices.createdAt))
+    .limit(limit);
+
+  return result.map(r => ({
+    id: r.id,
+    invoiceDate: r.invoiceDate,
+    buyerBusinessName: r.buyerBusinessName,
+    grandTotal: String(r.grandTotal),
+    status: r.status,
+    invoiceType: r.invoiceType,
+    isSandbox: r.isSandbox,
+    fbrInvoiceNumber: r.fbrInvoiceNumber ?? null,
+  }));
 }
 
 /**

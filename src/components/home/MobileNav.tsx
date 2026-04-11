@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -21,7 +22,7 @@ export function MobileNav() {
 
       {open && (
         <div style={{
-          position: "fixed", top: "68px", left: 0, right: 0, zIndex: 40,
+          position: "fixed", top: "68px", left: 0, right: 0, zIndex: 100,
           background: "#ffffff", borderBottom: "1px solid #e2e8f0",
           boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
           padding: "16px 20px",
@@ -30,6 +31,7 @@ export function MobileNav() {
           {[
             { href: "#features", label: "Features" },
             { href: "#how", label: "How It Works" },
+            { href: "#pricing", label: "Pricing" },
             { href: "#contact", label: "Contact" },
           ].map(item => (
             <a
@@ -48,6 +50,34 @@ export function MobileNav() {
               {item.label}
             </a>
           ))}
+
+          <div style={{ borderTop: "1px solid #e2e8f0", marginTop: "8px", paddingTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              style={{
+                fontSize: "15px", fontWeight: 600, color: "#1d4ed8",
+                textDecoration: "none", padding: "12px 16px",
+                borderRadius: "10px", display: "block", textAlign: "center",
+                border: "1.5px solid #bfdbfe", background: "#eff6ff",
+              }}
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              onClick={() => setOpen(false)}
+              style={{
+                fontSize: "15px", fontWeight: 700, color: "white",
+                textDecoration: "none", padding: "13px 16px",
+                borderRadius: "10px", display: "block", textAlign: "center",
+                background: "linear-gradient(135deg, #1d4ed8, #2563eb)",
+                boxShadow: "0 4px 14px rgba(29,78,216,0.35)",
+              }}
+            >
+              Get Started Free →
+            </Link>
+          </div>
         </div>
       )}
     </>

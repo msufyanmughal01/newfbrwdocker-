@@ -4,11 +4,13 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invoices, lineItems } from "@/lib/db/schema/invoices";
+import { businessProfiles } from "@/lib/db/schema/business-profiles";
 import { fbrSubmissions, buyerRegistry } from "@/lib/db/schema/fbr";
 import { validateWithFBR } from "./validate";
 import { postToFBR, FBRSubmissionError } from "./post-invoice";
 import { transitionStatus } from "./status-machine";
 import { FBRApiError, getEnv } from "./api-client";
+import { decryptData } from "@/lib/crypto/symmetric";
 
 export type InvoiceStatus = "draft" | "validating" | "validated" | "submitting" | "issued" | "failed";
 
@@ -51,6 +53,14 @@ export async function submitInvoiceToFBR({
   userId,
   scenarioId,
 }: SubmitInvoiceInput): Promise<SubmitOutcome> {
+  // 0. Resolve user's FBR environment setting (fallback to env var via getEnv())
+  const profileRows = await db
+    .select({ fbrEnvironment: businessProfiles.fbrEnvironment })
+    .from(businessProfiles)
+    .where(eq(businessProfiles.userId, userId))
+    .limit(1);
+  const fbrEnvironment: string = profileRows[0]?.fbrEnvironment ?? getEnv();
+
   // 1. Load invoice (ownership check done by caller)
   const invoiceRows = await db
     .select()
@@ -103,7 +113,7 @@ export async function submitInvoiceToFBR({
       .values({
         invoiceId: invoice.id,
         status: "validating",
-        environment: getEnv(),
+        environment: getEnv(fbrEnvironment),
         scenarioId: scenarioId ?? null,
         attemptedAt: new Date(),
       })
@@ -120,7 +130,8 @@ export async function submitInvoiceToFBR({
   // 4. FBR validate (external call — outside any transaction)
   const validateResult = await validateWithFBR(
     fbrPayload as Parameters<typeof validateWithFBR>[0],
-    userId
+    userId,
+    fbrEnvironment
   );
 
   // TX-2: Persist validation result
@@ -151,7 +162,8 @@ export async function submitInvoiceToFBR({
   // 5. FBR post (external call — outside any transaction)
   const postResult = await postToFBR(
     fbrPayload as Parameters<typeof postToFBR>[0],
-    userId
+    userId,
+    fbrEnvironment
   );
 
   const issuedAt = new Date();
@@ -235,11 +247,11 @@ function buildFBRPayload(
   return {
     invoiceType: invoice.invoiceType,
     invoiceDate: invoice.invoiceDate,
-    sellerNTNCNIC: invoice.sellerNTNCNIC,
+    sellerNTNCNIC: decryptData(invoice.sellerNTNCNIC),
     sellerBusinessName: invoice.sellerBusinessName,
     sellerProvince: invoice.sellerProvince,
     sellerAddress: invoice.sellerAddress,
-    buyerNTNCNIC: invoice.buyerNTNCNIC ?? "",
+    buyerNTNCNIC: invoice.buyerNTNCNIC ? decryptData(invoice.buyerNTNCNIC) : "",
     buyerBusinessName: invoice.buyerBusinessName,
     buyerProvince: invoice.buyerProvince,
     buyerAddress: invoice.buyerAddress,

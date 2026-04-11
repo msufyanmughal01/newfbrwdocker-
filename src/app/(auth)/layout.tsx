@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
@@ -8,7 +17,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       justifyContent: "center",
       padding: "24px",
       position: "relative",
-      overflow: "hidden",
+      overflowX: "hidden",
+      overflowY: "auto",
     }}>
       {/* Grid dot pattern */}
       <div style={{
@@ -51,8 +61,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 <line x1="6" y1="13" x2="10" y2="13" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
-            <span style={{ fontWeight: 800, fontSize: "24px", color: "#ffffff", letterSpacing: "-0.01em" }}>
-              Tax<span style={{ color: "#60a5fa" }}>Digital</span>
+            <span style={{ fontWeight: 800, fontSize: "22px", color: "#ffffff", letterSpacing: "-0.01em" }}>
+              Easy<span style={{ color: "#60a5fa" }}>Digital</span> Invoice
             </span>
           </div>
           <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.55)", margin: 0 }}>
@@ -71,7 +81,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         <p style={{ textAlign: "center", fontSize: "12px", color: "rgba(255,255,255,0.35)", marginTop: "20px" }}>
-          © {new Date().getFullYear()} TaxDigital · Secure Portal
+          © {new Date().getFullYear()} Easy Digital Invoice · Secure Portal
         </p>
       </div>
     </div>

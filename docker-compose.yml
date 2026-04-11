@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: taxdigital-app
+    container_name: easydigital-app
     restart: unless-stopped
     # Not exposed to host — only nginx needs port 3000 internally
     expose:
@@ -34,9 +34,9 @@ services:
       - .env.production
     environment:
       - NODE_ENV=production
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-https://localhost}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-https://easydigitalinvoice.com}
     networks:
-      - taxdigital-net
+      - easydigital-net
     healthcheck:
       # node:slim does NOT include curl — use Node.js built-in fetch instead
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)throw r.status;process.exit(0)}).catch(()=>process.exit(1))"]
@@ -48,7 +48,7 @@ services:
   # ── Nginx reverse proxy ────────────────────────────────────────────────────
   nginx:
     image: nginx:alpine
-    container_name: taxdigital-nginx
+    container_name: easydigital-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -63,7 +63,7 @@ services:
       app:
         condition: service_healthy
     networks:
-      - taxdigital-net
+      - easydigital-net
 
   # ── Let's Encrypt certificate manager ─────────────────────────────────────
   # Only started in production via --profile production
@@ -77,7 +77,7 @@ services:
   #   a socket proxy (e.g. tecnativa/docker-socket-proxy) in high-security envs.
   certbot:
     image: certbot/certbot:latest
-    container_name: taxdigital-certbot
+    container_name: easydigital-certbot
     restart: unless-stopped
     profiles:
       - production
@@ -100,5 +100,5 @@ volumes:
 
 # ── Networks ───────────────────────────────────────────────────────────────────
 networks:
-  taxdigital-net:
+  easydigital-net:
     driver: bridge

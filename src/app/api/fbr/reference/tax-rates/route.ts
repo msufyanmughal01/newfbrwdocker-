@@ -11,9 +11,28 @@ export async function GET(request: NextRequest) {
   }
 
   const date = request.nextUrl.searchParams.get('date') ?? undefined;
+  const transTypeIdParam = request.nextUrl.searchParams.get('transTypeId');
+  const provinceCodeParam = request.nextUrl.searchParams.get('provinceCode');
+
+  if (!transTypeIdParam || !provinceCodeParam) {
+    return NextResponse.json(
+      { error: 'Missing required query parameters: transTypeId, provinceCode' },
+      { status: 400 }
+    );
+  }
+
+  const transTypeId = parseInt(transTypeIdParam, 10);
+  const provinceCode = parseInt(provinceCodeParam, 10);
+
+  if (isNaN(transTypeId) || isNaN(provinceCode)) {
+    return NextResponse.json(
+      { error: 'transTypeId and provinceCode must be integers' },
+      { status: 400 }
+    );
+  }
 
   try {
-    const rates = await getFBRTaxRates(date, session.user.id);
+    const rates = await getFBRTaxRates(date, session.user.id, transTypeId, provinceCode);
     return NextResponse.json({ rates });
   } catch (err) {
     const code = (err as Error & { code?: string }).code;
