@@ -37,6 +37,8 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+      - name: Run unit tests
+        run: npm test -- --run --passWithNoTests
 
   # ─────────────────────────────────────────────
   # Job 2: Build and push Docker image
