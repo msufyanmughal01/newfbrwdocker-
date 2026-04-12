@@ -22,6 +22,7 @@ export function DashboardShell({ userName, isSandbox = false, children }: Dashbo
   // and redirect to /login if the session is gone.
   useEffect(() => {
     // Mark visible immediately for normal (non-bfcache) loads.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(true);
 
     const checkSession = async (hideFirst: boolean) => {
@@ -76,6 +77,7 @@ export function DashboardShell({ userName, isSandbox = false, children }: Dashbo
     const tabletOrMobileQuery = window.matchMedia("(max-width: 1023px)");
 
     // Immediately correct state to match the actual viewport — no animation yet.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsSidebarOpen(desktopQuery.matches);
 
     // Enable transitions on the next frame, after the initial correction has
