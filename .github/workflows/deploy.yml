@@ -134,7 +134,7 @@ jobs:
             # Postgres container on the internal easydigital-net bridge.
             echo "Running database migrations..."
             if ! docker run --rm \
-              --network easydigital-net \
+              --network easydigital_easydigital-net \
               --env-file .env.production \
               "${FULL_IMAGE}" \
               npx drizzle-kit migrate; then
@@ -170,7 +170,7 @@ jobs:
                 docker run -d \
                   --name easydigital-app \
                   --env-file .env.production \
-                  --network easydigital-net \
+                  --network easydigital_easydigital-net \
                   --restart unless-stopped \
                   "${PREV_IMAGE}" || echo "Rollback failed — manual intervention required"
               else
