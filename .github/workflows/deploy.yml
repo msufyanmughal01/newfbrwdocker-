@@ -91,39 +91,12 @@ jobs:
             NEXT_TELEMETRY_DISABLED=1
 
   # ─────────────────────────────────────────────
-  # Job 3: Run database migrations
-  # Runs from CI where full source code is available
-  # ─────────────────────────────────────────────
-  migrate:
-    name: Run Database Migrations
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run migrations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx drizzle-kit migrate
-
-  # ─────────────────────────────────────────────
-  # Job 4: Deploy to production server
+  # Job 3: Deploy to production server
   # ─────────────────────────────────────────────
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: migrate
+    needs: build
     environment: production
 
     steps:
