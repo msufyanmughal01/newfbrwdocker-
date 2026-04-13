@@ -112,10 +112,10 @@ export function mapToFBRFormat(
 
     // Line items (sorted by index for consistent ordering)
     items: invoice.items.map((item, index) => mapLineItemToFBR(item, index + 1)),
-  };
 
-  // Always include invoiceRefNo (FBR expects "" when not applicable)
-  payload.invoiceRefNo = invoice.invoiceRefNo || "";
+    // Always include invoiceRefNo (FBR expects "" when not applicable)
+    invoiceRefNo: invoice.invoiceRefNo || "",
+  };
 
   // Add sandbox scenario ID if testing
   if (options?.sandbox && options.scenarioId) {
