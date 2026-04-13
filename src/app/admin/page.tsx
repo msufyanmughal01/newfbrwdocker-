@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { user as userTable } from "@/lib/db/schema";
-import { account } from "@/lib/db/schema";
 import { businessProfiles } from "@/lib/db/schema/business-profiles";
 import { desc, eq, sql } from "drizzle-orm";
 import { AdminDashboardClient } from "./admin-client";

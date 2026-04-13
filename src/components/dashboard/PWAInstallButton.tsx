@@ -9,15 +9,11 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function PWAInstallButton() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches
+  );
 
   useEffect(() => {
-    // Check if already installed (running as standalone PWA)
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
-
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallEvent(e as BeforeInstallPromptEvent);
@@ -25,14 +21,15 @@ export function PWAInstallButton() {
 
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Also hide button if app gets installed during session
-    window.addEventListener("appinstalled", () => {
+    const onInstalled = () => {
       setIsInstalled(true);
       setInstallEvent(null);
-    });
+    };
+    window.addEventListener("appinstalled", onInstalled);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
 

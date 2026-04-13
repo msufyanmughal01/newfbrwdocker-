@@ -64,7 +64,7 @@ const TABS = [
   },
 ];
 
-export function SettingsClient({ profile, user, activeTab }: SettingsClientProps) {
+export function SettingsClient({ profile, user: _user, activeTab }: SettingsClientProps) {
   const resolvedTab = TABS.find(t => t.id === activeTab) ? activeTab : "company";
 
   return (

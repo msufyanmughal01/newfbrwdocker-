@@ -90,7 +90,6 @@ function evaluateFormula(formula: string, cells: CellData, depth = 0): number | 
   const arith = expr.replace(/([A-Z]+\d+)/g, m => String(getCellNumeric(m, cells, depth)));
   if (/^[\d\s+\-*/().]+$/.test(arith)) {
     try {
-      // eslint-disable-next-line no-new-func
       const result = new Function(`"use strict"; return (${arith})`)();
       if (typeof result === 'number' && isFinite(result)) return result;
       if (!isFinite(result)) return '#DIV/0!';

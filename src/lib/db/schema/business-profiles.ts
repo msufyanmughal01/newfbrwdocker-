@@ -1,7 +1,7 @@
 // Drizzle ORM Schema — business_profiles
 // 1:1 with users; stores business identity, personal details, and encrypted FBR token
 
-import { pgTable, uuid, text, varchar, timestamp, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, varchar, timestamp, jsonb } from 'drizzle-orm/pg-core';
 // Note: ntnCnic and cnic use text (not varchar) to accommodate AES-256-GCM encrypted values (~80+ chars)
 import { user } from './auth';
 

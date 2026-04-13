@@ -2,7 +2,7 @@
 // DELETE /api/admin/auth — clear admin session cookie
 
 import { NextRequest, NextResponse } from "next/server";
-import { makeSessionToken, revokeAdminToken, COOKIE_NAME as _COOKIE_NAME } from "../_admin-auth";
+import { makeSessionToken, revokeAdminToken } from "../_admin-auth";
 import { logAuditEvent, getRequestIp } from "@/lib/security/audit";
 
 // getRequestIp (from audit) reads x-forwarded-for and x-real-ip and is used

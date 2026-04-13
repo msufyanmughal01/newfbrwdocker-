@@ -4,7 +4,7 @@
 import { db } from '@/lib/db';
 import { businessProfiles } from '@/lib/db/schema/business-profiles';
 import { invoices } from '@/lib/db/schema/invoices';
-import { getPlan, PLANS } from './plans';
+import { getPlan } from './plans';
 import { eq, and, gte, sql } from 'drizzle-orm';
 
 export interface QuotaStatus {
