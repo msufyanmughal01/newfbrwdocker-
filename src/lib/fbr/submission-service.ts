@@ -256,7 +256,7 @@ function buildFBRPayload(
     buyerProvince: invoice.buyerProvince,
     buyerAddress: invoice.buyerAddress,
     buyerRegistrationType: invoice.buyerRegistrationType,
-    invoiceRefNo: invoice.invoiceRefNo ?? undefined,
+    invoiceRefNo: invoice.invoiceRefNo ?? "",
     ...(scenarioId ? { scenarioId } : {}),
     items: lineItemRows
       .sort((a, b) => a.lineNumber - b.lineNumber)
@@ -271,7 +271,7 @@ function buildFBRPayload(
         fixedNotifiedValueOrRetailPrice: parseFloat(item.fixedNotifiedValueOrRetailPrice ?? "0"),
         salesTaxApplicable: parseFloat(item.salesTaxApplicable),
         salesTaxWithheldAtSource: parseFloat(item.salesTaxWithheldAtSource ?? "0"),
-        extraTax: parseFloat(item.extraTax ?? "0"),
+        extraTax: item.extraTax ?? "",
         furtherTax: parseFloat(item.furtherTax ?? "0"),
         sroScheduleNo: item.sroScheduleNo ?? "",
         fedPayable: parseFloat(item.fedPayable ?? "0"),

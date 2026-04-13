@@ -2,6 +2,7 @@
 
 import { authClient } from "@/lib/auth-client";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PWAInstallButton } from "@/components/dashboard/PWAInstallButton";
 
 interface HeaderProps {
   userName: string;
@@ -72,6 +73,7 @@ export function Header({ userName, onMobileMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <PWAInstallButton />
         <ThemeToggle />
 
         {/* Avatar */}

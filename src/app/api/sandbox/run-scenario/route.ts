@@ -71,15 +71,15 @@ export async function POST(request: NextRequest) {
     const needsRegisteredBuyer = scenario.requiredFields.includes('buyerNTNCNIC');
     const buyer = needsRegisteredBuyer ? TEST_BUYER_REGISTERED : TEST_BUYER_UNREGISTERED;
 
-    // Derive tax rate from scenario
+    // Derive tax rate from scenario — stored with '%' to match FBR format and parseTaxRate()
     const taxRateMap: Record<string, string> = {
-      '18%': '18',
-      '17%': '17',
-      '5%': '5',
-      '0%': '0',
-      '18% + 2% further tax': '18',
+      '18%': '18%',
+      '17%': '17%',
+      '5%': '5%',
+      '0%': '0%',
+      '18% + 2% further tax': '18%',
     };
-    const rate = taxRateMap[scenario.taxVariant] ?? '18';
+    const rate = taxRateMap[scenario.taxVariant] ?? '18%';
     const baseValue = 10000;
     const taxRate = parseFloat(rate) / 100;
     const salesTax = Math.round(baseValue * taxRate * 100) / 100;

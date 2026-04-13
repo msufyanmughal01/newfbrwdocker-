@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { bulkInvoiceBatches } from "@/lib/db/schema/bulk-invoices";
 import { eq } from "drizzle-orm";
+import { getBusinessProfile } from "@/lib/settings/business-profile";
 
 interface BulkRow {
   rowIndex: number;
@@ -66,6 +67,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid rows to submit" }, { status: 400 });
   }
 
+  // Load seller info from user's business profile
+  const profile = await getBusinessProfile(session.user.id);
+  const sellerNTNCNIC = profile?.ntnCnic ?? "";
+  const sellerBusinessName = profile?.businessName ?? "";
+  const sellerProvince = profile?.province ?? "Punjab";
+  const sellerAddress = profile?.address ?? "";
+
   // Update batch status to submitting
   await db
     .update(bulkInvoiceBatches)
@@ -92,10 +100,10 @@ export async function POST(req: NextRequest) {
         buyerProvince: row.buyerProvince ?? "Punjab",
         buyerAddress: row.buyerAddress ?? "",
         buyerRegistrationType: row.buyerRegistrationType ?? "Registered",
-        sellerBusinessName: "",
-        sellerNTNCNIC: "",
-        sellerProvince: "Punjab",
-        sellerAddress: "",
+        sellerBusinessName,
+        sellerNTNCNIC,
+        sellerProvince,
+        sellerAddress,
         items: [
           {
             hsCode: row.hsCode ?? "",
@@ -114,7 +122,7 @@ export async function POST(req: NextRequest) {
             sroScheduleNo: "",
             fedPayable: 0,
             sroItemSerialNo: "",
-            totalValues: (row.valueSalesExcludingST ?? 0) + (row.salesTaxApplicable ?? 0) - (row.discount ?? 0),
+            totalValues: (row.valueSalesExcludingST ?? 0) + (row.salesTaxApplicable ?? 0),
           },
         ],
       };

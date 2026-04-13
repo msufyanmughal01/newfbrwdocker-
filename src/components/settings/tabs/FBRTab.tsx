@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { encryptedPut } from "@/lib/crypto/transit-client";
 import type { BusinessProfile } from "@/lib/db/schema/business-profiles";
 
 type Profile = Omit<BusinessProfile, 'fbrTokenEncrypted'>;
@@ -165,13 +166,9 @@ export function FBRTab({ profile }: FBRTabProps) {
       if (ntn.trim())      payload.ntnCnic   = ntn.trim();
       if (cnic.trim())     payload.cnic      = cnic.trim();
 
-      const res = await fetch("/api/settings/business-profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await encryptedPut("/api/settings/business-profile", payload);
       if (!res.ok) {
-        const body = await res.json();
+        const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? "Save failed");
       }
 

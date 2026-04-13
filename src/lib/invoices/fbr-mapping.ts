@@ -18,7 +18,7 @@ export interface FBRLineItem {
   fixedNotifiedValueOrRetailPrice: number;
   salesTaxApplicable: number;
   salesTaxWithheldAtSource: number;
-  extraTax: number;
+  extraTax: string;
   furtherTax: number;
   sroScheduleNo: string;
   fedPayable: number;
@@ -39,7 +39,7 @@ export interface FBRInvoicePayload {
   buyerProvince: string;
   buyerAddress: string;
   buyerRegistrationType: string;
-  invoiceRefNo?: string;
+  invoiceRefNo: string;
   scenarioId?: string; // For sandbox testing only
   items: FBRLineItem[];
 }
@@ -68,7 +68,7 @@ function mapLineItemToFBR(item: LineItem, _lineNumber: number): FBRLineItem {
     fixedNotifiedValueOrRetailPrice: item.fixedNotifiedValueOrRetailPrice || 0,
     salesTaxApplicable: item.salesTaxApplicable,
     salesTaxWithheldAtSource: item.salesTaxWithheldAtSource || 0,
-    extraTax: item.extraTax || 0,
+    extraTax: item.extraTax?.toString() || '',
     furtherTax: item.furtherTax || 0,
     sroScheduleNo: item.sroScheduleNo || '',
     fedPayable: item.fedPayable || 0,
@@ -114,10 +114,8 @@ export function mapToFBRFormat(
     items: invoice.items.map((item, index) => mapLineItemToFBR(item, index + 1)),
   };
 
-  // Add optional fields
-  if (invoice.invoiceRefNo) {
-    payload.invoiceRefNo = invoice.invoiceRefNo;
-  }
+  // Always include invoiceRefNo (FBR expects "" when not applicable)
+  payload.invoiceRefNo = invoice.invoiceRefNo || "";
 
   // Add sandbox scenario ID if testing
   if (options?.sandbox && options.scenarioId) {

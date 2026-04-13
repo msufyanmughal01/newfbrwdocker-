@@ -259,8 +259,65 @@ export const LineItemRow = memo(function LineItemRow({
         {/* ── SECTION 4: Additional FBR Fields ───────────── */}
         <SectionLabel>Additional (FBR)</SectionLabel>
         <div className="grid grid-cols-12 gap-3">
+          {/* Further Tax */}
+          <div className="col-span-6 md:col-span-3">
+            <label className="block text-xs font-medium mb-1">
+              Further Tax
+              <span className="ml-1 text-[var(--foreground-subtle)] font-normal">(2% if applicable)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              {...register(getFieldName('furtherTax'), { valueAsNumber: true })}
+              defaultValue={0}
+              className={`${inputBase} ${inputNormal}`}
+            />
+          </div>
+
+          {/* ST Withheld at Source */}
+          <div className="col-span-6 md:col-span-3">
+            <label className="block text-xs font-medium mb-1">
+              ST Withheld at Source
+              <span className="ml-1 text-[var(--foreground-subtle)] font-normal">(if applicable)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              {...register(getFieldName('salesTaxWithheldAtSource'), { valueAsNumber: true })}
+              defaultValue={0}
+              className={`${inputBase} ${inputNormal}`}
+            />
+          </div>
+
+          {/* Fixed/Notified Value or Retail Price */}
+          <div className="col-span-6 md:col-span-3">
+            <label className="block text-xs font-medium mb-1">
+              Fixed/Notified Value
+              <span className="ml-1 text-[var(--foreground-subtle)] font-normal">(if applicable)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              {...register(getFieldName('fixedNotifiedValueOrRetailPrice'), { valueAsNumber: true })}
+              defaultValue={0}
+              className={`${inputBase} ${inputNormal}`}
+            />
+          </div>
+
+          {/* FED Payable */}
+          <div className="col-span-6 md:col-span-3">
+            <label className="block text-xs font-medium mb-1">FED Payable</label>
+            <input
+              type="number"
+              step="0.01"
+              {...register(getFieldName('fedPayable'), { valueAsNumber: true })}
+              defaultValue={0}
+              className={`${inputBase} ${inputNormal}`}
+            />
+          </div>
+
           {/* SRO Schedule No */}
-          <div className="col-span-12 md:col-span-4">
+          <div className="col-span-12 md:col-span-6">
             <label className="block text-xs font-medium mb-1">
               SRO Schedule No
               <span className="ml-1 text-[var(--foreground-subtle)] font-normal">(if applicable)</span>
@@ -274,7 +331,7 @@ export const LineItemRow = memo(function LineItemRow({
           </div>
 
           {/* SRO Item Serial No */}
-          <div className="col-span-12 md:col-span-4">
+          <div className="col-span-12 md:col-span-6">
             <label className="block text-xs font-medium mb-1">
               SRO Item Serial No
               <span className="ml-1 text-[var(--foreground-subtle)] font-normal">(if applicable)</span>
@@ -286,27 +343,12 @@ export const LineItemRow = memo(function LineItemRow({
               className={`${inputBase} ${inputNormal}`}
             />
           </div>
-
-          {/* FED Payable */}
-          <div className="col-span-6 md:col-span-4">
-            <label className="block text-xs font-medium mb-1">FED Payable</label>
-            <input
-              type="number"
-              step="0.01"
-              {...register(getFieldName('fedPayable'), { valueAsNumber: true })}
-              defaultValue={0}
-              className={`${inputBase} ${inputNormal}`}
-            />
-          </div>
         </div>
 
       </div>
 
-      {/* Hidden fields */}
-      <input type="hidden" {...register(getFieldName('fixedNotifiedValueOrRetailPrice'), { valueAsNumber: true })} value={0} />
-      <input type="hidden" {...register(getFieldName('salesTaxWithheldAtSource'), { valueAsNumber: true })} value={0} />
+      {/* Hidden field — extraTax is a string identifier (e.g. "FED", "SED", "") sent to FBR */}
       <input type="hidden" {...register(getFieldName('extraTax'), { valueAsNumber: true })} value={0} />
-      <input type="hidden" {...register(getFieldName('furtherTax'), { valueAsNumber: true })} value={0} />
     </div>
   );
 });

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import type { BusinessProfile } from "@/lib/db/schema/business-profiles";
+import { encryptedPut } from "@/lib/crypto/transit-client";
 
 type Profile = Omit<BusinessProfile, 'fbrTokenEncrypted'>;
 
@@ -75,23 +76,19 @@ export function CompanyTab({ profile }: CompanyTabProps) {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/settings/business-profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName: businessName || undefined,
-          businessEmail: businessEmail || undefined,
-          phone: phone || undefined,
-          province: province || undefined,
-          address: address || undefined,
-          city: city || undefined,
-          postalCode: postalCode || undefined,
-          invoiceAddressType,
-          invoiceNote: invoiceNote || null,
-          invoiceNoteMode,
-          paymentDetails: (bankName || iban || accountTitle || branch) ? { bankName, iban, accountTitle, branch } : null,
-          paymentDetailsMode,
-        }),
+      const res = await encryptedPut("/api/settings/business-profile", {
+        businessName: businessName || undefined,
+        businessEmail: businessEmail || undefined,
+        phone: phone || undefined,
+        province: province || undefined,
+        address: address || undefined,
+        city: city || undefined,
+        postalCode: postalCode || undefined,
+        invoiceAddressType,
+        invoiceNote: invoiceNote || null,
+        invoiceNoteMode,
+        paymentDetails: (bankName || iban || accountTitle || branch) ? { bankName, iban, accountTitle, branch } : null,
+        paymentDetailsMode,
       });
       if (!res.ok) throw new Error("Save failed");
       setSaved(true);
