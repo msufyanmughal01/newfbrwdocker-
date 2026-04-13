@@ -130,7 +130,7 @@ jobs:
 
             # Zero-downtime rolling restart:
             # Recreate only the app container; --no-deps leaves nginx untouched.
-            docker compose up -d --no-deps --force-recreate app
+            APP_IMAGE="${FULL_IMAGE}" docker compose up -d --no-deps --force-recreate app
 
             # Wait for health check (up to 60 s, polling every 5 s)
             echo "Waiting for health check..."

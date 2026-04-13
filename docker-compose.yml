@@ -22,6 +22,7 @@ services:
 
   # ── Next.js application ────────────────────────────────────────────────────
   app:
+    image: ${APP_IMAGE:-ghcr.io/msufyanmughal01/newfbrwdocker:latest}
     build:
       context: .
       dockerfile: Dockerfile
