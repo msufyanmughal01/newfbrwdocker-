@@ -150,6 +150,17 @@ done
 
 log "Nginx is up and passing config test."
 
+# Remove dummy cert dirs so certbot uses exact names (no -0001 suffix)
+log "Removing dummy cert directories before issuing real certs..."
+docker compose run --rm --entrypoint /bin/sh certbot -c "
+  rm -rf /etc/letsencrypt/live/${RSA_CERT}
+  rm -rf /etc/letsencrypt/live/${ECDSA_CERT}
+  rm -rf /etc/letsencrypt/archive/${RSA_CERT}
+  rm -rf /etc/letsencrypt/archive/${ECDSA_CERT}
+  rm -f /etc/letsencrypt/renewal/${RSA_CERT}.conf
+  rm -f /etc/letsencrypt/renewal/${ECDSA_CERT}.conf
+"
+
 # ── Step 4: Issue RSA certificate ──────────────────────────────────────────────
 log "Step 4/6 — Issuing RSA certificate via webroot..."
 
