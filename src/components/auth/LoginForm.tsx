@@ -20,8 +20,10 @@ export function LoginForm() {
       const result = await authClient.signIn.email({ email, password });
       if (result.error) {
         const msg = result.error.message?.toLowerCase() ?? "";
-        if (msg.includes("invalid") || msg.includes("credentials") || msg.includes("password") || msg.includes("not found") || result.error.status === 401) {
-          setError("Incorrect email or password. Please try again.");
+        if (msg.includes("account is temporarily locked") || result.error.status === 429) {
+          setError(result.error.message ?? "Account is temporarily locked. Please try again later.");
+        } else if (msg.includes("invalid") || msg.includes("credentials") || msg.includes("password") || msg.includes("not found") || result.error.status === 401) {
+          setError("Incorrect email or password. If you signed up with Google, use the 'Continue with Google' button below.");
         } else if (msg.includes("email") && msg.includes("verify")) {
           setError("Please verify your email address before signing in.");
         } else {

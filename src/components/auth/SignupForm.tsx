@@ -7,16 +7,26 @@ import Link from "next/link";
 import { SocialLoginButton } from "./SocialLoginButton";
 
 // Map better-auth error codes / messages to user-friendly text
-function mapSignupError(message?: string | null, status?: number): string {
-  if (!message) return "Could not create account. Please try again.";
-  const msg = message.toLowerCase();
-  if (msg.includes("already exists") || msg.includes("user already") || status === 422)
+function mapSignupError(message?: string | null, status?: number, code?: string | null): string {
+  if (!message && !code) return "Could not create account. Please try again.";
+
+  // HIBP breach check returns a specific code
+  if (code === "PASSWORD_BREACHED" || (message && message.includes("known data breaches")))
+    return message ?? "This password has appeared in known data breaches. Please choose a different password.";
+
+  const msg = (message ?? "").toLowerCase();
+
+  // Duplicate email — better-auth may return 409 or 422
+  if (msg.includes("already exists") || msg.includes("user already") || status === 409 || status === 422)
     return "An account with this email already exists. Please sign in instead.";
-  if (msg.includes("password") && msg.includes("short"))
+
+  if (msg.includes("password") && (msg.includes("short") || msg.includes("least") || msg.includes("minimum")))
     return "Password must be at least 8 characters.";
-  if (msg.includes("invalid email"))
+
+  if (msg.includes("invalid email") || msg.includes("email is invalid"))
     return "Please enter a valid email address.";
-  return message;
+
+  return message ?? "Could not create account. Please try again.";
 }
 
 // Simple password strength: 0 = weak, 1 = fair, 2 = strong
@@ -64,7 +74,8 @@ export function SignupForm() {
     try {
       const result = await authClient.signUp.email({ name, email, password });
       if (result.error) {
-        setError(mapSignupError(result.error.message, result.error.status));
+        const code = (result.error as { code?: string }).code ?? null;
+        setError(mapSignupError(result.error.message, result.error.status, code));
         setLoading(false);
         return;
       }

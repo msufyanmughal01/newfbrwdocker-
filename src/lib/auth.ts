@@ -58,8 +58,13 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
-          const { upsertBusinessProfile } = await import('./settings/business-profile');
-          await upsertBusinessProfile(user.id, {});
+          try {
+            const { upsertBusinessProfile } = await import('./settings/business-profile');
+            await upsertBusinessProfile(user.id, {});
+          } catch (err) {
+            // Log but never block user creation — the profile can be created lazily on first login.
+            console.error('[auth] Failed to create initial business profile for user', user.id, err);
+          }
         },
       },
     },

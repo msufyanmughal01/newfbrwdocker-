@@ -4,7 +4,7 @@
 import { cache } from 'react';
 import { db } from '@/lib/db';
 import { businessProfiles } from '@/lib/db/schema/business-profiles';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { encrypt } from './encryption';
 import { encryptData, decryptData } from '@/lib/crypto/symmetric';
 import type { BusinessProfile } from '@/lib/db/schema/business-profiles';
@@ -111,9 +111,19 @@ export async function upsertBusinessProfile(
   if (data.fbrPosid !== undefined) updatePayload.fbrPosid = data.fbrPosid;
   if (data.invoiceNote !== undefined) updatePayload.invoiceNote = data.invoiceNote;
   if (data.invoiceNoteMode !== undefined) updatePayload.invoiceNoteMode = data.invoiceNoteMode;
-  if (data.paymentDetails !== undefined) updatePayload.paymentDetails = data.paymentDetails;
+  // For jsonb columns, use sql`null::jsonb` instead of JS null to avoid
+  // pg driver serialising null as "" which breaks the jsonb type check.
+  if (data.paymentDetails !== undefined) {
+    updatePayload.paymentDetails = data.paymentDetails === null
+      ? sql`null::jsonb`
+      : data.paymentDetails;
+  }
   if (data.paymentDetailsMode !== undefined) updatePayload.paymentDetailsMode = data.paymentDetailsMode;
-  if (data.businessCredentials !== undefined) updatePayload.businessCredentials = data.businessCredentials;
+  if (data.businessCredentials !== undefined) {
+    updatePayload.businessCredentials = data.businessCredentials === null
+      ? sql`null::jsonb`
+      : data.businessCredentials;
+  }
   if (data.invoiceAddressType !== undefined) updatePayload.invoiceAddressType = data.invoiceAddressType;
 
   if (data.fbrToken) {

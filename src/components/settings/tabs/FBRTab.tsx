@@ -130,7 +130,11 @@ export function FBRTab({ profile }: FBRTabProps) {
 
   /* STRN — stored in businessCredentials jsonb */
   const existingCreds = (profile?.businessCredentials as Credential[] | null) ?? [];
-  const [strn, setStrn] = useState(existingCreds.find(c => c.type === "STRN")?.value ?? "");
+  // Only pre-fill STRN if the stored value looks like a real STRN (numeric, ≤15 digits).
+  // Prevents a previously mis-saved email address from re-appearing in the field.
+  const storedStrn = existingCreds.find(c => c.type === "STRN")?.value ?? "";
+  const [strn, setStrn] = useState(/^\d{1,15}$/.test(storedStrn) ? storedStrn : "");
+  const [strnErr, setStrnErr] = useState("");
 
   /* Validation */
   const validateNtn = (v: string) => {
@@ -143,11 +147,17 @@ export function FBRTab({ profile }: FBRTabProps) {
     if (!/^\d{13}$/.test(v)) { setCnicErr("CNIC must be exactly 13 digits"); return false; }
     setCnicErr(""); return true;
   };
+  const validateStrn = (v: string) => {
+    if (!v) { setStrnErr(""); return true; }
+    if (!/^\d{1,15}$/.test(v)) { setStrnErr("STRN must be numeric (up to 15 digits)"); return false; }
+    setStrnErr(""); return true;
+  };
 
   const handleSave = async () => {
     const ntnOk = validateNtn(ntn);
     const cnicOk = validateCnic(cnic);
-    if (!ntnOk || !cnicOk) return;
+    const strnOk = validateStrn(strn);
+    if (!ntnOk || !cnicOk || !strnOk) return;
 
     setSaving(true);
     setError("");
@@ -267,16 +277,19 @@ export function FBRTab({ profile }: FBRTabProps) {
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
               <label style={{ ...fieldLabel, marginBottom: 0 }}>STRN</label>
-              {existingCreds.find(c => c.type === "STRN")?.value && <span style={savedBadge}><CheckTick /> Saved</span>}
+              {/^\d{1,15}$/.test(storedStrn) && <span style={savedBadge}><CheckTick /> Saved</span>}
             </div>
             <input
-              style={inputBase}
+              style={strnErr ? inputError : inputBase}
               value={strn}
-              onChange={e => setStrn(e.target.value)}
+              onChange={e => { setStrn(e.target.value); validateStrn(e.target.value); }}
               placeholder="e.g. 4210123456789"
-              maxLength={50}
+              maxLength={15}
+              inputMode="numeric"
             />
-            <p style={fieldHint}>Sales Tax Reg. No. — shown on invoices.</p>
+            <p style={{ ...fieldHint, color: strnErr ? "var(--error)" : "var(--foreground-subtle)" }}>
+              {strnErr || "Sales Tax Reg. No. — numeric digits only, shown on invoices."}
+            </p>
           </div>
 
         </div>
