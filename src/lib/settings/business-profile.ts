@@ -16,6 +16,27 @@ const PROVINCE_ALIASES: Record<string, string> = {
   'Azad Kashmir': 'Azad Jammu and Kashmir',
 };
 
+/** Valid STRN: 1–15 digits only. */
+const VALID_STRN_RE = /^\d{1,15}$/;
+
+/**
+ * Sanitise businessCredentials read from the DB:
+ * - Strip any STRN entry whose value is not a valid numeric STRN
+ *   (guards against accidentally-saved email addresses or free-text).
+ * - Return null when the cleaned array is empty.
+ */
+function sanitiseCredentials(
+  raw: unknown,
+): Array<{ type: string; value: string; includeInInvoice: boolean }> | null {
+  if (!Array.isArray(raw)) return null;
+  const cleaned = raw.filter((c) => {
+    if (!c || typeof c !== 'object') return false;
+    if (c.type === 'STRN') return VALID_STRN_RE.test(c.value ?? '');
+    return true;
+  });
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 /** Decrypt sensitive fields before returning a profile to callers. */
 function decryptProfile(profile: BusinessProfile): Omit<BusinessProfile, 'fbrTokenEncrypted'> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -28,6 +49,8 @@ function decryptProfile(profile: BusinessProfile): Omit<BusinessProfile, 'fbrTok
     province,
     ntnCnic: rest.ntnCnic ? decryptData(rest.ntnCnic) : rest.ntnCnic,
     cnic: rest.cnic ? decryptData(rest.cnic) : rest.cnic,
+    // Strip invalid credentials (e.g. email accidentally saved as STRN)
+    businessCredentials: sanitiseCredentials(rest.businessCredentials),
   };
 }
 
