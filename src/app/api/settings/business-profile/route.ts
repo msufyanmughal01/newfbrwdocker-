@@ -9,7 +9,7 @@ import { withDecryption } from '@/lib/crypto/with-decryption';
 
 const FBR_PROVINCES = [
   'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
-  'Gilgit Baltistan', 'Azad Kashmir', 'Islamabad',
+  'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Jammu and Kashmir',
 ];
 
 const paymentDetailsSchema = z.object({
@@ -83,6 +83,12 @@ export const PUT = withDecryption(async (request: NextRequest, body: unknown) =>
     );
   }
 
-  const profile = await upsertBusinessProfile(session.user.id, parsed.data);
-  return NextResponse.json({ success: true, profile });
+  try {
+    const profile = await upsertBusinessProfile(session.user.id, parsed.data);
+    return NextResponse.json({ success: true, profile });
+  } catch (err) {
+    console.error('Failed to update business profile:', err);
+    const message = err instanceof Error ? err.message : 'Failed to save profile';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 });

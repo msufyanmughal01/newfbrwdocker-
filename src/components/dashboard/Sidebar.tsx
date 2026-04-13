@@ -245,6 +245,26 @@ function SidebarContent({
           <span className="shrink-0">{settingsIcon}</span>
           {isOpen && "Settings"}
         </Link>
+
+        {/* Version badge — confirms latest fixes are deployed */}
+        {isOpen && (
+          <div
+            title="v1.1.0 — Province names fixed · Auth fixed · Google OAuth · HS codes"
+            className="mt-2 mx-1 flex items-center gap-1.5 rounded-md px-2 py-1 cursor-default"
+            style={{ background: "var(--primary-subtle)" }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: "var(--primary)", boxShadow: "0 0 4px var(--primary)" }}
+            />
+            <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>
+              v1.1.0
+            </span>
+            <span className="text-[10px]" style={{ color: "var(--foreground-subtle)" }}>
+              · Provinces · Auth · OAuth
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

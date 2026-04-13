@@ -33,6 +33,7 @@ export function HSCodeSearch({ form, index, onUOMChange }: HSCodeSearchProps) {
   const [fbrResults, setFbrResults] = useState<HSCodeResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [fbrError, setFbrError] = useState(false);
   const [isLoadingUOM, setIsLoadingUOM] = useState(false);
   const [masterLoaded, setMasterLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -75,15 +76,23 @@ export function HSCodeSearch({ form, index, onUOMChange }: HSCodeSearchProps) {
   const searchFBR = useDebouncedCallback(async (q: string) => {
     if (q.length < 3) {
       setFbrResults([]);
+      setFbrError(false);
       return;
     }
     setIsLoading(true);
+    setFbrError(false);
     try {
       const res = await fetch(`/api/fbr/reference/hs-codes?q=${encodeURIComponent(q)}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setFbrError(true);
+        setFbrResults([]);
+        return;
+      }
       const data = await res.json();
-      setFbrResults(data.results ?? []);
+      const results = Array.isArray(data.results) ? data.results : [];
+      setFbrResults(results);
     } catch {
+      setFbrError(true);
       setFbrResults([]);
     } finally {
       setIsLoading(false);
@@ -233,8 +242,16 @@ export function HSCodeSearch({ form, index, onUOMChange }: HSCodeSearchProps) {
         </div>
       )}
 
+      {/* FBR search error */}
+      {isOpen && !isLoading && fbrError && query.length >= 3 && (
+        <div className="absolute z-50 mt-1 w-full rounded border border-[var(--warning)]/40 bg-[var(--warning-bg)] p-3 shadow-lg">
+          <p className="text-xs text-[var(--warning)] font-medium">FBR HS code search unavailable</p>
+          <p className="text-xs text-[var(--foreground-muted)] mt-0.5">Check your FBR token in Settings → FBR Integration</p>
+        </div>
+      )}
+
       {/* No results */}
-      {isOpen && !isLoading && !hasResults && query.length >= 3 && (
+      {isOpen && !isLoading && !fbrError && !hasResults && query.length >= 3 && (
         <div className="absolute z-50 mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg">
           <p className="text-xs text-[var(--foreground-muted)]">No matching HS codes found</p>
         </div>

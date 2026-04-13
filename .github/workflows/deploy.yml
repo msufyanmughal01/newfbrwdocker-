@@ -109,7 +109,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "nginx.conf,docker-compose.yml"
+          source: "nginx.conf,docker-compose.yml,scripts/nginx-startup.sh"
           target: /opt/easydigital/
           overwrite: true
 
@@ -126,6 +126,9 @@ jobs:
           script: |
             set -euo pipefail
             cd /opt/easydigital
+
+            # Ensure startup script is executable after scp copy
+            chmod +x scripts/nginx-startup.sh 2>/dev/null || true
 
             # Replace YOUR_DOMAIN placeholder in nginx.conf with the real domain.
             # This is safe to run on every deploy — idempotent once replaced.

@@ -66,7 +66,7 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    minPasswordLength: 12,
+    minPasswordLength: 8,
     password: {
       hash:   async (password)         => hashPassword(password),
       verify: async ({ hash, password }) => verifyPassword(hash, password),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { BusinessProfile } from "@/lib/db/schema/business-profiles";
 import { encryptedPut } from "@/lib/crypto/transit-client";
 
@@ -12,7 +13,7 @@ interface CompanyTabProps {
 
 const FBR_PROVINCES = [
   'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
-  'Gilgit Baltistan', 'Azad Kashmir', 'Islamabad',
+  'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Jammu and Kashmir',
 ];
 
 const inputStyle: React.CSSProperties = {
@@ -46,6 +47,7 @@ const sectionStyle: React.CSSProperties = {
 };
 
 export function CompanyTab({ profile }: CompanyTabProps) {
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -92,6 +94,7 @@ export function CompanyTab({ profile }: CompanyTabProps) {
       });
       if (!res.ok) throw new Error("Save failed");
       setSaved(true);
+      router.refresh();
       setTimeout(() => setSaved(false), 3000);
     } catch {
       setError("Failed to save. Please try again.");
@@ -134,6 +137,7 @@ export function CompanyTab({ profile }: CompanyTabProps) {
             display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
           }}>
             {logoPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={logoPreview} alt="Logo" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
             ) : (
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--foreground-subtle)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

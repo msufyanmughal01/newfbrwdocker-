@@ -9,12 +9,23 @@ import { encrypt } from './encryption';
 import { encryptData, decryptData } from '@/lib/crypto/symmetric';
 import type { BusinessProfile } from '@/lib/db/schema/business-profiles';
 
+/** Map legacy province names (saved before the rename) to canonical FBR values. */
+const PROVINCE_ALIASES: Record<string, string> = {
+  'Islamabad': 'Islamabad Capital Territory',
+  'Gilgit Baltistan': 'Gilgit-Baltistan',
+  'Azad Kashmir': 'Azad Jammu and Kashmir',
+};
+
 /** Decrypt sensitive fields before returning a profile to callers. */
 function decryptProfile(profile: BusinessProfile): Omit<BusinessProfile, 'fbrTokenEncrypted'> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { fbrTokenEncrypted: _omit, ...rest } = profile;
+  const province = rest.province && PROVINCE_ALIASES[rest.province]
+    ? PROVINCE_ALIASES[rest.province]
+    : rest.province;
   return {
     ...rest,
+    province,
     ntnCnic: rest.ntnCnic ? decryptData(rest.ntnCnic) : rest.ntnCnic,
     cnic: rest.cnic ? decryptData(rest.cnic) : rest.cnic,
   };

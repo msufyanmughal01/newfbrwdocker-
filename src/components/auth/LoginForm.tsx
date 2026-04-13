@@ -19,7 +19,14 @@ export function LoginForm() {
     try {
       const result = await authClient.signIn.email({ email, password });
       if (result.error) {
-        setError(result.error.message ?? "Invalid credentials");
+        const msg = result.error.message?.toLowerCase() ?? "";
+        if (msg.includes("invalid") || msg.includes("credentials") || msg.includes("password") || msg.includes("not found") || result.error.status === 401) {
+          setError("Incorrect email or password. Please try again.");
+        } else if (msg.includes("email") && msg.includes("verify")) {
+          setError("Please verify your email address before signing in.");
+        } else {
+          setError(result.error.message ?? "Sign in failed. Please try again.");
+        }
         setLoading(false);
         return;
       }

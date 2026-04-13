@@ -14,15 +14,22 @@ export async function searchHSCodes(query: string, userId?: string): Promise<{ r
   let wasCached = true;
   const cacheKey = `hs_codes:global`;
 
-  const all = await getOrFetch<HSCodeEntry[]>(
+  const raw = await getOrFetch<unknown>(
     cacheKey,
     'hs_codes',
     async () => {
       wasCached = false;
-      return fbrGetHSCodes(userId) as Promise<HSCodeEntry[]>;
+      return fbrGetHSCodes(userId);
     },
     24 // 24-hour TTL
   );
+
+  // FBR may wrap the list in an object; handle both array and {data:[...]} shapes
+  const all: HSCodeEntry[] = Array.isArray(raw)
+    ? (raw as HSCodeEntry[])
+    : Array.isArray((raw as { data?: unknown })?.data)
+      ? ((raw as { data: HSCodeEntry[] }).data)
+      : [];
 
   const q = query.toLowerCase();
   const results = all

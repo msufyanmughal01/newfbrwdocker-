@@ -64,6 +64,7 @@ const TABS = [
   },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SettingsClient({ profile, user: _user, activeTab }: SettingsClientProps) {
   const resolvedTab = TABS.find(t => t.id === activeTab) ? activeTab : "company";
 
