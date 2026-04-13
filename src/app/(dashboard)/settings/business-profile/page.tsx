@@ -32,7 +32,21 @@ export default async function BusinessProfilePage() {
       </div>
 
       <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-sm)] p-6">
-        <BusinessProfileForm profile={profile} />
+        <BusinessProfileForm profile={profile ? {
+          businessName: profile.businessName,
+          businessEmail: profile.businessEmail,
+          ntnCnic: profile.ntnCnic,
+          cnic: profile.cnic,
+          phone: profile.phone,
+          province: profile.province,
+          address: profile.address,
+          city: profile.city,
+          postalCode: profile.postalCode,
+          logoPath: profile.logoPath,
+          fbrTokenHint: profile.fbrTokenHint,
+          fbrEnvironment: profile.fbrEnvironment,
+          fbrPosid: profile.fbrPosid,
+        } : null} />
       </div>
     </div>
   );

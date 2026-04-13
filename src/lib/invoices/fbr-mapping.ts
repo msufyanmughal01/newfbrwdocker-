@@ -18,7 +18,7 @@ export interface FBRLineItem {
   fixedNotifiedValueOrRetailPrice: number;
   salesTaxApplicable: number;
   salesTaxWithheldAtSource: number;
-  extraTax: string;
+  extraTax: number;
   furtherTax: number;
   sroScheduleNo: string;
   fedPayable: number;
@@ -68,7 +68,7 @@ function mapLineItemToFBR(item: LineItem, _lineNumber: number): FBRLineItem {
     fixedNotifiedValueOrRetailPrice: item.fixedNotifiedValueOrRetailPrice || 0,
     salesTaxApplicable: item.salesTaxApplicable,
     salesTaxWithheldAtSource: item.salesTaxWithheldAtSource || 0,
-    extraTax: item.extraTax?.toString() || '',
+    extraTax: item.extraTax || 0,
     furtherTax: item.furtherTax || 0,
     sroScheduleNo: item.sroScheduleNo || '',
     fedPayable: item.fedPayable || 0,

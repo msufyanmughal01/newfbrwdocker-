@@ -271,7 +271,7 @@ function buildFBRPayload(
         fixedNotifiedValueOrRetailPrice: parseFloat(item.fixedNotifiedValueOrRetailPrice ?? "0"),
         salesTaxApplicable: parseFloat(item.salesTaxApplicable),
         salesTaxWithheldAtSource: parseFloat(item.salesTaxWithheldAtSource ?? "0"),
-        extraTax: item.extraTax ?? "",
+        extraTax: parseFloat(item.extraTax ?? "0"),
         furtherTax: parseFloat(item.furtherTax ?? "0"),
         sroScheduleNo: item.sroScheduleNo ?? "",
         fedPayable: parseFloat(item.fedPayable ?? "0"),
