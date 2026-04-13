@@ -153,7 +153,7 @@ log "Nginx is up and passing config test."
 # ── Step 4: Issue RSA certificate ──────────────────────────────────────────────
 log "Step 4/6 — Issuing RSA certificate via webroot..."
 
-docker compose run --rm certbot certonly \
+docker compose run --rm --entrypoint certbot certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   ${CERTBOT_FLAGS} \
@@ -168,7 +168,7 @@ log "RSA certificate issued: /etc/letsencrypt/live/${RSA_CERT}/"
 # ── Step 5: Issue ECDSA certificate ───────────────────────────────────────────
 log "Step 5/6 — Issuing ECDSA certificate (P-384) via webroot..."
 
-docker compose run --rm certbot certonly \
+docker compose run --rm --entrypoint certbot certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   ${CERTBOT_FLAGS} \
