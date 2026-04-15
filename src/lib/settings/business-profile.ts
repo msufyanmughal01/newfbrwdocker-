@@ -134,25 +134,26 @@ export async function upsertBusinessProfile(
   if (data.fbrPosid !== undefined) updatePayload.fbrPosid = data.fbrPosid;
   if (data.invoiceNote !== undefined) updatePayload.invoiceNote = data.invoiceNote;
   if (data.invoiceNoteMode !== undefined) updatePayload.invoiceNoteMode = data.invoiceNoteMode;
-  // For jsonb columns, use sql`null::jsonb` instead of JS null to avoid
-  // pg driver serialising null as "" which breaks the jsonb type check.
+  // For jsonb columns, always use sql casting to ensure the pg driver serialises
+  // the value correctly in both the VALUES and ON CONFLICT SET clauses.
   if (data.paymentDetails !== undefined) {
     updatePayload.paymentDetails = data.paymentDetails === null
       ? sql`null::jsonb`
-      : data.paymentDetails;
+      : sql`${JSON.stringify(data.paymentDetails)}::jsonb`;
   }
   if (data.paymentDetailsMode !== undefined) updatePayload.paymentDetailsMode = data.paymentDetailsMode;
   if (data.businessCredentials !== undefined) {
     updatePayload.businessCredentials = data.businessCredentials === null
       ? sql`null::jsonb`
-      : data.businessCredentials;
+      : sql`${JSON.stringify(data.businessCredentials)}::jsonb`;
   }
   if (data.invoiceAddressType !== undefined) updatePayload.invoiceAddressType = data.invoiceAddressType;
 
   if (data.fbrToken) {
     const token = data.fbrToken.trim();
     updatePayload.fbrTokenEncrypted = encrypt(token);
-    updatePayload.fbrTokenHint = '••••' + token.slice(-4);
+    // Store only the last 4 chars; the display layer adds the masking bullets.
+    updatePayload.fbrTokenHint = token.slice(-4);
     updatePayload.fbrTokenUpdatedAt = new Date();
   }
 

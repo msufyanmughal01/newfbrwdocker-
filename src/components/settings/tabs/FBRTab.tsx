@@ -121,11 +121,11 @@ export function FBRTab({ profile }: FBRTabProps) {
   /* API token — never pre-filled (encrypted) */
   const [fbrToken, setFbrToken] = useState("");
 
-  /* Identity fields — encrypted in DB, shown only when profile has value */
-  const [ntn, setNtn] = useState("");
+  /* Identity fields — pre-filled with decrypted values from profile */
+  const [ntn, setNtn] = useState(profile?.ntnCnic ?? "");
   const [ntnErr, setNtnErr] = useState("");
 
-  const [cnic, setCnic] = useState("");
+  const [cnic, setCnic] = useState(profile?.cnic ?? "");
   const [cnicErr, setCnicErr] = useState("");
 
   /* STRN — stored in businessCredentials jsonb */
@@ -171,10 +171,10 @@ export function FBRTab({ profile }: FBRTabProps) {
       const payload: Record<string, unknown> = {
         fbrEnvironment,
         businessCredentials: newCreds.length > 0 ? newCreds : null,
+        ntnCnic: ntn.trim(),   // always send: empty string clears, digits update
+        cnic:    cnic.trim(),  // always send: empty string clears, digits update
       };
       if (fbrToken.trim()) payload.fbrToken = fbrToken.trim();
-      if (ntn.trim())      payload.ntnCnic   = ntn.trim();
-      if (cnic.trim())     payload.cnic      = cnic.trim();
 
       const res = await encryptedPut("/api/settings/business-profile", payload);
       if (!res.ok) {
@@ -183,10 +183,8 @@ export function FBRTab({ profile }: FBRTabProps) {
       }
 
       setSaved(true);
-      setFbrToken("");
-      setNtn("");
-      setCnic("");
-      router.refresh();   // invalidate router cache so invoice form picks up new NTN
+      setFbrToken("");   // clear token field — never re-show the key
+      router.refresh();  // invalidate router cache so invoice form picks up new NTN
       setTimeout(() => setSaved(false), 3500);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to save. Please try again.");
@@ -247,8 +245,9 @@ export function FBRTab({ profile }: FBRTabProps) {
               style={ntnErr ? inputError : inputBase}
               value={ntn}
               onChange={e => { setNtn(e.target.value); validateNtn(e.target.value); }}
-              placeholder={profile?.ntnCnic ? "New 7-digit NTN" : "e.g. 1234567"}
+              placeholder="e.g. 1234567"
               maxLength={7}
+              inputMode="numeric"
             />
             <p style={{ ...fieldHint, color: ntnErr ? "var(--error)" : "var(--foreground-subtle)" }}>
               {ntnErr || "National Tax Number — 7 digits. Encrypted."}
@@ -265,8 +264,9 @@ export function FBRTab({ profile }: FBRTabProps) {
               style={cnicErr ? inputError : inputBase}
               value={cnic}
               onChange={e => { setCnic(e.target.value); validateCnic(e.target.value); }}
-              placeholder={profile?.cnic ? "New 13-digit CNIC" : "e.g. 3520112345671"}
+              placeholder="e.g. 3520112345671"
               maxLength={13}
+              inputMode="numeric"
             />
             <p style={{ ...fieldHint, color: cnicErr ? "var(--error)" : "var(--foreground-subtle)" }}>
               {cnicErr || "National Identity Card — 13 digits. Encrypted."}
@@ -402,20 +402,22 @@ export function FBRTab({ profile }: FBRTabProps) {
                 borderRadius: "5px", fontFamily: "monospace", fontSize: "12px",
                 color: "var(--foreground)",
               }}>
-                ••••••••{profile.fbrTokenHint}
+                {"••••••••" + profile.fbrTokenHint.replace(/^[•\u2022]+/, "")}
               </code>
             </span>
           </div>
         )}
 
         <input
-          type="password"
+          type="text"
           style={inputBase}
           value={fbrToken}
           onChange={e => setFbrToken(e.target.value)}
-          placeholder={profile?.fbrTokenHint ? "Enter new token to replace current" : "Paste your FBR API token here"}
+          placeholder={profile?.fbrTokenHint ? "Paste new API key to replace current" : "Paste your FBR API key here"}
+          autoComplete="off"
+          spellCheck={false}
         />
-        <p style={fieldHint}>Stored encrypted — the token is never shown again after saving.</p>
+        <p style={fieldHint}>Paste the full API key issued by FBR. Stored encrypted — never shown again after saving.</p>
       </div>
 
       {/* ── Status + Save ───────────────────────────────────── */}
