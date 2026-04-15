@@ -88,7 +88,14 @@ export const PUT = withDecryption(async (request: NextRequest, body: unknown) =>
     return NextResponse.json({ success: true, profile });
   } catch (err) {
     console.error('Failed to update business profile:', err);
-    const message = err instanceof Error ? err.message : 'Failed to save profile';
+    // Drizzle wraps the underlying DB error; surface the actual cause so the
+    // client can show a meaningful message instead of the raw SQL dump.
+    const cause = err instanceof Error
+      ? ((err as Error & { cause?: unknown }).cause)
+      : undefined;
+    const message = cause instanceof Error
+      ? cause.message
+      : err instanceof Error ? err.message : 'Failed to save profile';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 });

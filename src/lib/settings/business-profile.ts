@@ -134,8 +134,10 @@ export async function upsertBusinessProfile(
   if (data.fbrPosid !== undefined) updatePayload.fbrPosid = data.fbrPosid;
   if (data.invoiceNote !== undefined) updatePayload.invoiceNote = data.invoiceNote;
   if (data.invoiceNoteMode !== undefined) updatePayload.invoiceNoteMode = data.invoiceNoteMode;
-  // For jsonb columns, always use sql casting to ensure the pg driver serialises
-  // the value correctly in both the VALUES and ON CONFLICT SET clauses.
+  // For jsonb columns use explicit ::jsonb cast so the Neon HTTP driver sends a
+  // proper JSON string rather than a PostgreSQL array literal.
+  // NOTE: these are set only on the INSERT side; the ON CONFLICT SET references
+  // them via `excluded.<column>` to avoid sharing the same sql object instance.
   if (data.paymentDetails !== undefined) {
     updatePayload.paymentDetails = data.paymentDetails === null
       ? sql`null::jsonb`
@@ -157,6 +159,18 @@ export async function upsertBusinessProfile(
     updatePayload.fbrTokenUpdatedAt = new Date();
   }
 
+  // Build a separate conflict-set that never reuses the same sql object instances
+  // from updatePayload — the Neon HTTP driver can mis-number parameters when the
+  // same sql node appears in both VALUES and SET.
+  // For jsonb fields we reference the inserted value via `excluded.<col>` instead.
+  const conflictSet: Record<string, unknown> = { ...updatePayload };
+  if (data.paymentDetails !== undefined) {
+    conflictSet.paymentDetails = sql`excluded.payment_details`;
+  }
+  if (data.businessCredentials !== undefined) {
+    conflictSet.businessCredentials = sql`excluded.business_credentials`;
+  }
+
   await db
     .insert(businessProfiles)
     .values({
@@ -165,7 +179,7 @@ export async function upsertBusinessProfile(
     })
     .onConflictDoUpdate({
       target: businessProfiles.userId,
-      set: updatePayload,
+      set: conflictSet,
     });
 
   return getBusinessProfile(userId);
