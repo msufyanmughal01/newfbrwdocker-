@@ -376,7 +376,7 @@ export function FBRTab({ profile }: FBRTabProps) {
         </div>
       </div>
 
-      {/* ── SECTION 3: API Token ────────────────────────────── */}
+      {/* ── SECTION 3: FBR API ──────────────────────────────── */}
       <div style={card}>
         <div style={sectionHead}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)"
@@ -396,14 +396,7 @@ export function FBRTab({ profile }: FBRTabProps) {
           }}>
             <CheckTick size={13}/>
             <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-              Token on file:{" "}
-              <code style={{
-                background: "var(--surface-3)", padding: "2px 8px",
-                borderRadius: "5px", fontFamily: "monospace", fontSize: "12px",
-                color: "var(--foreground)",
-              }}>
-                {"••••••••" + profile.fbrTokenHint.replace(/^[•\u2022]+/, "")}
-              </code>
+              FBR API credential saved
             </span>
           </div>
         )}
