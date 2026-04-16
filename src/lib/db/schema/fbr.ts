@@ -131,7 +131,7 @@ export const buyerRegistry = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
 
     // Buyer identity
-    ntnCnic: varchar('ntn_cnic', { length: 13 }).notNull(), // 7 digits (NTN) or 13 digits (CNIC)
+    ntnCnic: text('ntn_cnic').notNull(), // 7 digits (NTN) or 13 digits (CNIC)
     businessName: varchar('business_name', { length: 255 }).notNull(),
 
     // Address details

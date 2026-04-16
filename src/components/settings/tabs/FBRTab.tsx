@@ -384,9 +384,9 @@ export function FBRTab({ profile }: FBRTabProps) {
             <circle cx="7.5" cy="15.5" r="5.5"/>
             <path d="M21 2l-9.6 9.6M15.5 7.5l3 3"/>
           </svg>
-          <h3 style={sectionTitle}>FBR API Token</h3>
+          <h3 style={sectionTitle}>FBR API Key</h3>
         </div>
-        <p style={sectionSub}>Authentication token issued by FBR for your registered account.</p>
+        <p style={sectionSub}>API key issued by FBR for your registered account (used as Bearer token with the FBR API).</p>
 
         {profile?.fbrTokenHint && (
           <div style={{
@@ -417,7 +417,7 @@ export function FBRTab({ profile }: FBRTabProps) {
           autoComplete="off"
           spellCheck={false}
         />
-        <p style={fieldHint}>Paste the full API key issued by FBR. Stored encrypted — never shown again after saving.</p>
+        <p style={fieldHint}>Paste the API key issued by FBR (not the endpoint URL — the key/token string itself). Stored encrypted — never shown again after saving.</p>
       </div>
 
       {/* ── Status + Save ───────────────────────────────────── */}

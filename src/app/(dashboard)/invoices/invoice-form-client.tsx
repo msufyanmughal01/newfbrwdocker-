@@ -357,7 +357,7 @@ export function InvoiceFormClient({ isSandbox = false, sellerProfile, initialDra
                 <button
                   type={isTokenMissing ? 'button' : 'submit'}
                   onClick={isTokenMissing ? () => router.push('/settings/business-profile') : undefined}
-                  disabled={isSubmitting || fbrStatus === 'issued' || (!isTokenMissing && !isValid)}
+                  disabled={isSubmitting || fbrStatus === 'issued'}
                   className={`w-full py-3 px-6 rounded-xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-y-px active:translate-y-0 text-white ${
                     isTokenMissing
                       ? 'bg-amber-500 hover:bg-amber-600'
