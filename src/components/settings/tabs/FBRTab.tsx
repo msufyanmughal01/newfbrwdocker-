@@ -384,9 +384,9 @@ export function FBRTab({ profile }: FBRTabProps) {
             <circle cx="7.5" cy="15.5" r="5.5"/>
             <path d="M21 2l-9.6 9.6M15.5 7.5l3 3"/>
           </svg>
-          <h3 style={sectionTitle}>FBR API Key</h3>
+          <h3 style={sectionTitle}>FBR API</h3>
         </div>
-        <p style={sectionSub}>API key issued by FBR for your registered account (used as Bearer token with the FBR API).</p>
+        <p style={sectionSub}>FBR API credential issued for your registered account.</p>
 
         {profile?.fbrTokenHint && (
           <div style={{
@@ -413,11 +413,11 @@ export function FBRTab({ profile }: FBRTabProps) {
           style={inputBase}
           value={fbrToken}
           onChange={e => setFbrToken(e.target.value)}
-          placeholder={profile?.fbrTokenHint ? "Paste new API key to replace current" : "Paste your FBR API key here"}
+          placeholder={profile?.fbrTokenHint ? "Paste new FBR API credential to replace current" : "Paste your FBR API credential here"}
           autoComplete="off"
           spellCheck={false}
         />
-        <p style={fieldHint}>Paste the API key issued by FBR (not the endpoint URL — the key/token string itself). Stored encrypted — never shown again after saving.</p>
+        <p style={fieldHint}>Paste the FBR API credential (not the endpoint URL — the credential string itself). Stored encrypted — never shown again after saving.</p>
       </div>
 
       {/* ── Status + Save ───────────────────────────────────── */}
