@@ -86,60 +86,58 @@ export async function POST(request: NextRequest) {
       address: profile?.address || TEST_SELLER.address,
     };
 
-    // Insert a test invoice in the DB (marked as sandbox)
-    const [invoice] = await db.transaction(async (tx) => {
-      const [newInvoice] = await tx.insert(invoices).values({
-        userId: session.user.id,
-        invoiceType: 'Sale Invoice',
-        invoiceDate: new Date().toISOString().split('T')[0],
-        sellerNTNCNIC: encryptData(seller.ntnCnic),
-        sellerBusinessName: seller.businessName,
-        sellerProvince: seller.province,
-        sellerAddress: seller.address,
-        buyerNTNCNIC: buyer.ntnCnic ? encryptData(buyer.ntnCnic) : null,
-        buyerBusinessName: buyer.businessName,
-        buyerProvince: buyer.province,
-        buyerAddress: buyer.address,
-        buyerRegistrationType: buyer.registrationType,
-        subtotal: baseValue.toString(),
-        totalTax: (salesTax + furtherTax).toString(),
-        grandTotal: totalValues.toString(),
-        status: 'draft',
-        isSandbox: true,
-        fbrPayload: {
-          scenarioId,
-          test: true,
-          scenario: scenario.description,
-        },
-      }).returning();
+    // Insert a test invoice in the DB (marked as sandbox).
+    // Note: no transaction wrapper because the project uses neon-http driver
+    // which doesn't support transactions. Atomicity isn't critical for sandbox test data.
+    const [invoice] = await db.insert(invoices).values({
+      userId: session.user.id,
+      invoiceType: 'Sale Invoice',
+      invoiceDate: new Date().toISOString().split('T')[0],
+      sellerNTNCNIC: encryptData(seller.ntnCnic),
+      sellerBusinessName: seller.businessName,
+      sellerProvince: seller.province,
+      sellerAddress: seller.address,
+      buyerNTNCNIC: buyer.ntnCnic ? encryptData(buyer.ntnCnic) : null,
+      buyerBusinessName: buyer.businessName,
+      buyerProvince: buyer.province,
+      buyerAddress: buyer.address,
+      buyerRegistrationType: buyer.registrationType,
+      subtotal: baseValue.toString(),
+      totalTax: (salesTax + furtherTax).toString(),
+      grandTotal: totalValues.toString(),
+      status: 'draft',
+      isSandbox: true,
+      fbrPayload: {
+        scenarioId,
+        test: true,
+        scenario: scenario.description,
+      },
+    }).returning();
 
-      const fedPayable = scenarioId === 'SN017' ? Math.round(baseValue * 0.05 * 100) / 100 : 0;
-      const sroScheduleNo = (scenarioId === 'SN005' || scenarioId === 'SN024') ? '297' : null;
-      const sroItemSerialNo = scenarioId === 'SN024' ? '1' : null;
+    const fedPayable = scenarioId === 'SN017' ? Math.round(baseValue * 0.05 * 100) / 100 : 0;
+    const sroScheduleNo = (scenarioId === 'SN005' || scenarioId === 'SN024') ? '297' : null;
+    const sroItemSerialNo = scenarioId === 'SN024' ? '1' : null;
 
-      await tx.insert(lineItems).values({
-        invoiceId: newInvoice.id,
-        lineNumber: 1,
-        hsCode: '0101.2100',
-        productDescription: `[SANDBOX] ${scenario.description} Test Item`,
-        quantity: '1',
-        uom: 'NOS',
-        valueSalesExcludingST: baseValue.toString(),
-        fixedNotifiedValueOrRetailPrice: '0',
-        discount: '0',
-        rate: rate,
-        salesTaxApplicable: salesTax.toString(),
-        salesTaxWithheldAtSource: '0',
-        extraTax: '0',
-        furtherTax: furtherTax.toString(),
-        fedPayable: fedPayable.toString(),
-        saleType: scenario.saleType,
-        totalValues: totalValues.toString(),
-        ...(sroScheduleNo && { sroScheduleNo }),
-        ...(sroItemSerialNo && { sroItemSerialNo }),
-      });
-
-      return [newInvoice];
+    await db.insert(lineItems).values({
+      invoiceId: invoice.id,
+      lineNumber: 1,
+      hsCode: '0101.2100',
+      productDescription: `[SANDBOX] ${scenario.description} Test Item`,
+      quantity: '1',
+      uom: 'NOS',
+      valueSalesExcludingST: baseValue.toString(),
+      fixedNotifiedValueOrRetailPrice: '0',
+      discount: '0',
+      rate: rate,
+      salesTaxApplicable: salesTax.toString(),
+      salesTaxWithheldAtSource: '0',
+      extraTax: '0',
+      furtherTax: furtherTax.toString(),
+      fedPayable: fedPayable.toString(),
+      saleType: scenario.saleType,
+      totalValues: totalValues.toString(),
+      ...(sroScheduleNo && { sroScheduleNo }),
+      ...(sroItemSerialNo && { sroItemSerialNo }),
     });
 
     return NextResponse.json({
