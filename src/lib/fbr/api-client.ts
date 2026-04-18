@@ -49,21 +49,33 @@ async function resolveToken(userId?: string): Promise<string> {
       if (encrypted) {
         const expiresAt = rows[0]?.fbrTokenExpiresAt;
         if (expiresAt && expiresAt < new Date()) {
-          // FBR tokens have a 5-year validity. Once expired, FBR returns 401.
-          // Surface this as an actionable error so the user can update their token.
           const err = new Error('FBR_TOKEN_EXPIRED') as Error & { code: string };
           err.code = 'FBR_TOKEN_EXPIRED';
           throw err;
         }
-        return decrypt(encrypted);
+        try {
+          const token = decrypt(encrypted).trim();
+          if (!token) {
+            const err = new Error('FBR_TOKEN_DECRYPT_EMPTY') as Error & { code: string };
+            err.code = 'FBR_TOKEN_DECRYPT_FAILED';
+            throw err;
+          }
+          return token;
+        } catch (decryptErr) {
+          console.error('[FBR] Token decrypt failed for user', userId, '-', (decryptErr as Error).message);
+          const err = new Error('FBR_TOKEN_DECRYPT_FAILED: re-save your FBR token in Settings (encryption key may have changed)') as Error & { code: string };
+          err.code = 'FBR_TOKEN_DECRYPT_FAILED';
+          throw err;
+        }
       }
     } catch (err) {
-      // Re-throw known error codes — do NOT silently fall through to the shared
-      // env-var token when the user's token is expired or explicitly missing.
       const code = (err as Error & { code?: string }).code;
-      if (code === 'FBR_TOKEN_EXPIRED' || code === 'FBR_TOKEN_MISSING') throw err;
-      // Unexpected DB / decryption errors: fall through to env var so the app
-      // degrades gracefully rather than returning a 500 for every request.
+      if (
+        code === 'FBR_TOKEN_EXPIRED' ||
+        code === 'FBR_TOKEN_MISSING' ||
+        code === 'FBR_TOKEN_DECRYPT_FAILED'
+      ) throw err;
+      console.error('[FBR] Unexpected token resolution error, falling back to env var:', (err as Error).message);
     }
   }
 

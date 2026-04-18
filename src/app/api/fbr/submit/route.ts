@@ -93,6 +93,16 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
         { status: 400 }
       );
     }
+    if (code === "FBR_TOKEN_DECRYPT_FAILED") {
+      return NextResponse.json(
+        {
+          error: "FBR token could not be decrypted",
+          code: "FBR_TOKEN_DECRYPT_FAILED",
+          message: "Your saved FBR token could not be read. Please re-save your FBR token in Settings → FBR Integration.",
+        },
+        { status: 400 }
+      );
+    }
     if (err instanceof FBRSubmissionError) {
       return NextResponse.json(
         {

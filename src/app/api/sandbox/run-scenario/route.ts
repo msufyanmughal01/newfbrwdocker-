@@ -183,6 +183,31 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    const code = (error as Error & { code?: string }).code;
+    if (code === 'FBR_TOKEN_DECRYPT_FAILED') {
+      return NextResponse.json({
+        success: false,
+        status: 'failed',
+        error: 'Your saved FBR token could not be read. Please re-save your FBR token in Settings → FBR Integration.',
+        code,
+      }, { status: 400 });
+    }
+    if (code === 'FBR_TOKEN_MISSING') {
+      return NextResponse.json({
+        success: false,
+        status: 'failed',
+        error: 'No FBR token configured. Add your token in Settings → FBR Integration.',
+        code,
+      }, { status: 400 });
+    }
+    if (code === 'FBR_TOKEN_EXPIRED') {
+      return NextResponse.json({
+        success: false,
+        status: 'failed',
+        error: 'Your FBR token has expired. Please update it in Settings → FBR Integration.',
+        code,
+      }, { status: 400 });
+    }
     console.error('Sandbox scenario error:', error);
     return NextResponse.json({
       success: false,

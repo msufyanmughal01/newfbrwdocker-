@@ -140,11 +140,11 @@ export function HSCodeMasterManager() {
             {searchResults.slice(0, 10).map((result) => (
               <div
                 key={result.hS_CODE}
-                className="flex items-center justify-between px-3 py-2 hover:bg-[var(--surface-2)] transition-colors"
+                className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-[var(--surface-2)] transition-colors"
               >
-                <div>
-                  <span className="font-mono text-xs font-semibold text-[var(--primary)]">{result.hS_CODE}</span>
-                  <span className="ml-2 text-xs text-[var(--foreground-muted)] truncate max-w-xs">{result.description}</span>
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-[var(--primary)] shrink-0">{result.hS_CODE}</span>
+                  <span className="text-xs text-[var(--foreground-muted)] truncate">{result.description}</span>
                 </div>
                 <button
                   type="button"
