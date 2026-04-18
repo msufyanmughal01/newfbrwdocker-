@@ -35,16 +35,8 @@ const TEST_BUYER_UNREGISTERED = {
 };
 
 export async function POST(request: NextRequest) {
-  // ── Hard production guard ────────────────────────────────────────────────
-  // Sandbox is a test harness that creates fake invoices and bypasses real FBR
-  // validation. It MUST be completely disabled in production environments.
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'Sandbox is not available in production.' },
-      { status: 403 }
-    );
-  }
-
+  // Safety is enforced per-user via profile.fbrEnvironment === 'sandbox' below.
+  // The NODE_ENV check was removed so sandbox testing works in Docker / production builds.
   try {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
