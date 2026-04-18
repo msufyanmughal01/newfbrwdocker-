@@ -9,6 +9,7 @@ import { FBR_SCENARIOS } from '@/lib/fbr/scenarios';
 import { db } from '@/lib/db';
 import { invoices, lineItems } from '@/lib/db/schema/invoices';
 import { encryptData } from '@/lib/crypto/symmetric';
+import { submitInvoiceToFBR } from '@/lib/fbr/submission-service';
 
 // Test data used for all sandbox scenarios
 const TEST_SELLER = {
@@ -140,6 +141,31 @@ export async function POST(request: NextRequest) {
       ...(sroItemSerialNo && { sroItemSerialNo }),
     });
 
+    // Submit to FBR so the scenario is actually recorded on their system
+    const fbrResult = await submitInvoiceToFBR({
+      invoiceId: invoice.id,
+      userId: session.user.id,
+      scenarioId,
+    });
+
+    if (!fbrResult.success) {
+      return NextResponse.json({
+        success: false,
+        scenarioId,
+        scenarioDescription: scenario.description,
+        invoiceId: invoice.id,
+        status: 'failed',
+        result: {
+          invoiceCreated: true,
+          isSandbox: true,
+          grandTotal: totalValues,
+          taxRate: rate,
+          saleType: scenario.saleType,
+        },
+        error: fbrResult.errors ?? fbrResult.fbrError,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       scenarioId,
@@ -152,6 +178,8 @@ export async function POST(request: NextRequest) {
         grandTotal: totalValues,
         taxRate: rate,
         saleType: scenario.saleType,
+        fbrInvoiceNumber: fbrResult.fbrInvoiceNumber,
+        issuedAt: fbrResult.issuedAt,
       },
     });
   } catch (error) {
