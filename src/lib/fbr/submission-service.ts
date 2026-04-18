@@ -107,25 +107,22 @@ export async function submitInvoiceToFBR({
   const fbrPayload = buildFBRPayload(invoice, lineItemRows, scenarioId);
 
   // TX-1: Create submission record + mark invoice as validating
-  const submission = await db.transaction(async (tx) => {
-    const [sub] = await tx
-      .insert(fbrSubmissions)
-      .values({
-        invoiceId: invoice.id,
-        status: "validating",
-        environment: getEnv(fbrEnvironment),
-        scenarioId: scenarioId ?? null,
-        attemptedAt: new Date(),
-      })
-      .returning();
+  // Note: neon-http driver doesn't support transactions; run sequentially.
+  const [submission] = await db
+    .insert(fbrSubmissions)
+    .values({
+      invoiceId: invoice.id,
+      status: "validating",
+      environment: getEnv(fbrEnvironment),
+      scenarioId: scenarioId ?? null,
+      attemptedAt: new Date(),
+    })
+    .returning();
 
-    await tx
-      .update(invoices)
-      .set({ status: "validating", fbrSubmissionId: sub.id })
-      .where(eq(invoices.id, invoiceId));
-
-    return sub;
-  });
+  await db
+    .update(invoices)
+    .set({ status: "validating", fbrSubmissionId: submission.id })
+    .where(eq(invoices.id, invoiceId));
 
   // 4. FBR validate (external call — outside any transaction)
   const validateResult = await validateWithFBR(
@@ -134,22 +131,20 @@ export async function submitInvoiceToFBR({
     fbrEnvironment
   );
 
-  // TX-2: Persist validation result
-  await db.transaction(async (tx) => {
-    await tx
-      .update(fbrSubmissions)
-      .set({
-        validateRequest: fbrPayload as Record<string, unknown>,
-        validateResponse: validateResult.fbrResponse as unknown as Record<string, unknown>,
-        status: validateResult.valid ? "validated" : "failed",
-      })
-      .where(eq(fbrSubmissions.id, submission.id));
+  // TX-2: Persist validation result (no transaction — neon-http limitation)
+  await db
+    .update(fbrSubmissions)
+    .set({
+      validateRequest: fbrPayload as Record<string, unknown>,
+      validateResponse: validateResult.fbrResponse as unknown as Record<string, unknown>,
+      status: validateResult.valid ? "validated" : "failed",
+    })
+    .where(eq(fbrSubmissions.id, submission.id));
 
-    await tx
-      .update(invoices)
-      .set({ status: validateResult.valid ? "submitting" : "failed" })
-      .where(eq(invoices.id, invoiceId));
-  });
+  await db
+    .update(invoices)
+    .set({ status: validateResult.valid ? "submitting" : "failed" })
+    .where(eq(invoices.id, invoiceId));
 
   if (!validateResult.valid) {
     return {
@@ -168,61 +163,59 @@ export async function submitInvoiceToFBR({
 
   const issuedAt = new Date();
 
-  // TX-3: Persist issued state + buyer registry (all or nothing)
-  await db.transaction(async (tx) => {
-    await tx
-      .update(fbrSubmissions)
-      .set({
-        postRequest: fbrPayload as Record<string, unknown>,
-        postResponse: postResult as unknown as Record<string, unknown>,
-        fbrInvoiceNumber: postResult.invoiceNumber,
-        status: "issued",
-        issuedAt,
-      })
-      .where(eq(fbrSubmissions.id, submission.id));
+  // TX-3: Persist issued state + buyer registry (no transaction — neon-http limitation)
+  await db
+    .update(fbrSubmissions)
+    .set({
+      postRequest: fbrPayload as Record<string, unknown>,
+      postResponse: postResult as unknown as Record<string, unknown>,
+      fbrInvoiceNumber: postResult.invoiceNumber,
+      status: "issued",
+      issuedAt,
+    })
+    .where(eq(fbrSubmissions.id, submission.id));
 
-    await tx
-      .update(invoices)
-      .set({
-        status: "issued",
-        fbrInvoiceNumber: postResult.invoiceNumber,
-        fbrSubmittedAt: issuedAt,
-        issuedAt,
-      })
-      .where(eq(invoices.id, invoiceId));
+  await db
+    .update(invoices)
+    .set({
+      status: "issued",
+      fbrInvoiceNumber: postResult.invoiceNumber,
+      fbrSubmittedAt: issuedAt,
+      issuedAt,
+    })
+    .where(eq(invoices.id, invoiceId));
 
-    // T040: Save buyer to registry after successful FBR issuance (non-fatal if fails)
-    if (invoice.buyerNTNCNIC && invoice.buyerBusinessName) {
-      try {
-        await tx
-          .insert(buyerRegistry)
-          .values({
-            userId,
-            ntnCnic: invoice.buyerNTNCNIC,
+  // T040: Save buyer to registry after successful FBR issuance (non-fatal if fails)
+  if (invoice.buyerNTNCNIC && invoice.buyerBusinessName) {
+    try {
+      await db
+        .insert(buyerRegistry)
+        .values({
+          userId,
+          ntnCnic: invoice.buyerNTNCNIC,
+          businessName: invoice.buyerBusinessName,
+          province: invoice.buyerProvince,
+          address: invoice.buyerAddress,
+          registrationType: invoice.buyerRegistrationType,
+          lastUsedAt: issuedAt,
+          useCount: 1,
+        })
+        .onConflictDoUpdate({
+          target: [buyerRegistry.userId, buyerRegistry.ntnCnic],
+          set: {
             businessName: invoice.buyerBusinessName,
             province: invoice.buyerProvince,
             address: invoice.buyerAddress,
             registrationType: invoice.buyerRegistrationType,
             lastUsedAt: issuedAt,
-            useCount: 1,
-          })
-          .onConflictDoUpdate({
-            target: [buyerRegistry.userId, buyerRegistry.ntnCnic],
-            set: {
-              businessName: invoice.buyerBusinessName,
-              province: invoice.buyerProvince,
-              address: invoice.buyerAddress,
-              registrationType: invoice.buyerRegistrationType,
-              lastUsedAt: issuedAt,
-              useCount: sql`${buyerRegistry.useCount} + 1`,
-              updatedAt: issuedAt,
-            },
-          });
-      } catch {
-        // Non-fatal: buyer registry failure must not block invoice issuance
-      }
+            useCount: sql`${buyerRegistry.useCount} + 1`,
+            updatedAt: issuedAt,
+          },
+        });
+    } catch {
+      // Non-fatal: buyer registry failure must not block invoice issuance
     }
-  });
+  }
 
   return {
     success: true,
