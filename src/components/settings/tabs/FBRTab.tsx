@@ -386,27 +386,74 @@ export function FBRTab({ profile }: FBRTabProps) {
           </svg>
           <h3 style={sectionTitle}>FBR API</h3>
         </div>
-        <p style={sectionSub}>FBR API credential issued for your registered account.</p>
+        <p style={sectionSub}>FBR API endpoint and your personal security token.</p>
 
-        <div style={{ marginBottom: "12px" }}>
+        {/* API URLs — same for all users, read-only */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+            <label style={{ ...fieldLabel, marginBottom: 0 }}>API Endpoints</label>
+            <span style={{
+              fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em",
+              color: "var(--foreground-subtle)", background: "var(--surface-2)",
+              border: "1px solid var(--border)", borderRadius: "20px", padding: "1px 7px",
+            }}>SAME FOR ALL USERS</span>
+          </div>
+
+          {[
+            {
+              label: "Post Invoice",
+              url: fbrEnvironment === "sandbox"
+                ? "https://gw.fbr.gov.pk/di_data/v1/di/postinvoicedata_sb"
+                : "https://gw.fbr.gov.pk/di_data/v1/di/postinvoicedata",
+            },
+            {
+              label: "Validate Invoice",
+              url: fbrEnvironment === "sandbox"
+                ? "https://gw.fbr.gov.pk/di_data/v1/di/validateinvoicedata_sb"
+                : "https://gw.fbr.gov.pk/di_data/v1/di/validateinvoicedata",
+            },
+          ].map(({ label, url }) => (
+            <div key={label} style={{ marginBottom: "8px" }}>
+              <span style={{ ...fieldLabel, marginBottom: "4px", display: "block" }}>{label}</span>
+              <div style={{
+                ...inputBase,
+                background: "var(--surface-2)",
+                color: "var(--foreground-muted)",
+                display: "flex", alignItems: "center", gap: "8px",
+                userSelect: "all" as const,
+              }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                <span style={{ fontSize: "12px", fontFamily: "monospace" }}>{url}</span>
+              </div>
+            </div>
+          ))}
+
+          <p style={fieldHint}>These endpoints are fixed by FBR and identical for every registered user. They switch automatically when you change the environment above.</p>
+        </div>
+
+        {/* Token — per-user */}
+        <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-            <label style={{ ...fieldLabel, marginBottom: 0 }}>FBR API Credential</label>
+            <label style={{ ...fieldLabel, marginBottom: 0 }}>Security Token</label>
             {profile?.fbrTokenHint && (
               <span style={savedBadge}><CheckTick /> Saved (···{profile.fbrTokenHint})</span>
             )}
           </div>
+          <input
+            type="text"
+            style={inputBase}
+            value={fbrToken}
+            onChange={e => setFbrToken(e.target.value)}
+            placeholder={profile?.fbrTokenHint ? "Paste new token to replace current" : "Paste your FBR security token here"}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <p style={fieldHint}>Your personal FBR bearer token — get it from IRIS portal → Digital Invoicing. Stored encrypted and never shown again after saving.</p>
         </div>
-
-        <input
-          type="text"
-          style={inputBase}
-          value={fbrToken}
-          onChange={e => setFbrToken(e.target.value)}
-          placeholder={profile?.fbrTokenHint ? "Paste new FBR API credential to replace current" : "Paste your FBR API credential here"}
-          autoComplete="off"
-          spellCheck={false}
-        />
-        <p style={fieldHint}>Paste the FBR API credential (not the endpoint URL — the credential string itself). Stored encrypted — never shown again after saving.</p>
       </div>
 
       {/* ── Status + Save ───────────────────────────────────── */}
