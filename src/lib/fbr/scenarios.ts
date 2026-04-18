@@ -1,5 +1,4 @@
-// FBR Sandbox Scenarios Configuration
-// 9 official FBR sandbox scenarios (SN001–SN009) as documented in FBR Digital Invoice API
+// FBR Sandbox Scenarios — official list from FBR Digital Invoice portal
 
 export interface FBRScenario {
   id: string;
@@ -13,7 +12,7 @@ export interface FBRScenario {
 export const FBR_SCENARIOS: FBRScenario[] = [
   {
     id: 'SN001',
-    description: 'Standard Rate — Registered Buyer',
+    description: 'Goods at Standard Rate to Registered Buyers',
     saleType: 'Goods at standard rate (default)',
     taxVariant: '18%',
     requiredFields: ['buyerNTNCNIC', 'hsCode', 'rate'],
@@ -21,31 +20,15 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   },
   {
     id: 'SN002',
-    description: 'Standard Rate — Unregistered Buyer',
+    description: 'Goods at Standard Rate to Unregistered Buyers',
     saleType: 'Goods at standard rate (default)',
     taxVariant: '18% + 2% further tax',
     requiredFields: ['hsCode', 'rate', 'furtherTax'],
     notes: 'Buyer is unregistered. 2% further tax applies on top of 18%.',
   },
   {
-    id: 'SN003',
-    description: 'Steel Melting / Re-rolled Products',
-    saleType: 'Steel Melting and re-rolling',
-    taxVariant: '17%',
-    requiredFields: ['hsCode', 'rate', 'saleType'],
-    notes: 'Special rate for melted/re-rolled steel products.',
-  },
-  {
-    id: 'SN004',
-    description: 'Ship Breakers',
-    saleType: 'Ship breaking',
-    taxVariant: '17%',
-    requiredFields: ['hsCode', 'rate', 'saleType'],
-    notes: 'Ship breaking and scrap steel from vessels.',
-  },
-  {
     id: 'SN005',
-    description: 'Reduced Rate Goods',
+    description: 'Reduced Rate Sale',
     saleType: 'Goods at reduced rate',
     taxVariant: '5%',
     requiredFields: ['hsCode', 'rate', 'sroScheduleNo'],
@@ -53,7 +36,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   },
   {
     id: 'SN006',
-    description: 'Exempt Goods',
+    description: 'Exempt Goods Sale',
     saleType: 'Exempt Goods',
     taxVariant: '0%',
     requiredFields: ['hsCode', 'saleType'],
@@ -61,27 +44,43 @@ export const FBR_SCENARIOS: FBRScenario[] = [
   },
   {
     id: 'SN007',
-    description: 'Zero Rated Goods (Exports)',
+    description: 'Zero Rated Sale',
     saleType: 'Zero-rated Goods',
     taxVariant: '0%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
-    notes: 'Zero-rated goods — distinct from exempt (used for exports).',
-  },
-  {
-    id: 'SN008',
-    description: '3rd Schedule Goods (Retail Price)',
-    saleType: '3rd Schedule Goods',
-    taxVariant: '18% on retail price',
-    requiredFields: ['hsCode', 'rate', 'fixedNotifiedValueOrRetailPrice'],
-    notes: 'Tax calculated on fixed/notified retail price, not transaction value.',
+    notes: 'Zero-rated goods — distinct from exempt, used for exports.',
   },
   {
     id: 'SN009',
-    description: 'Cotton Ginners',
+    description: 'Cotton Spinners Purchase from Cotton Ginners (Textile Sector)',
     saleType: 'Cotton Ginners',
     taxVariant: '7%',
     requiredFields: ['hsCode', 'rate', 'saleType'],
     notes: 'Cotton ginning and associated agricultural processing.',
+  },
+  {
+    id: 'SN016',
+    description: 'Processing / Conversion of Goods',
+    saleType: 'Processing / Conversion',
+    taxVariant: '18%',
+    requiredFields: ['hsCode', 'rate', 'saleType'],
+    notes: 'Invoice raised for processing or conversion services on goods.',
+  },
+  {
+    id: 'SN017',
+    description: 'Sale of Goods where FED is Charged in ST Mode',
+    saleType: 'Goods at standard rate (default)',
+    taxVariant: '18%',
+    requiredFields: ['hsCode', 'rate', 'fedPayable'],
+    notes: 'Federal Excise Duty charged in Sales Tax mode alongside ST.',
+  },
+  {
+    id: 'SN024',
+    description: 'Goods Sold that are Listed in SRO 297(I)/2023',
+    saleType: 'Goods at reduced rate',
+    taxVariant: '0%',
+    requiredFields: ['hsCode', 'rate', 'sroScheduleNo', 'sroItemSerialNo'],
+    notes: 'Goods under SRO 297(I)/2023 — zero/reduced rate with SRO reference.',
   },
 ];
 

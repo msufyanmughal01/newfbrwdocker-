@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
     const taxRateMap: Record<string, string> = {
       '18%': '18%',
       '17%': '17%',
+      '7%': '7%',
       '5%': '5%',
       '0%': '0%',
       '18% + 2% further tax': '18%',
@@ -120,6 +121,10 @@ export async function POST(request: NextRequest) {
         },
       }).returning();
 
+      const fedPayable = scenarioId === 'SN017' ? Math.round(baseValue * 0.05 * 100) / 100 : 0;
+      const sroScheduleNo = (scenarioId === 'SN005' || scenarioId === 'SN024') ? '297' : null;
+      const sroItemSerialNo = scenarioId === 'SN024' ? '1' : null;
+
       await tx.insert(lineItems).values({
         invoiceId: newInvoice.id,
         lineNumber: 1,
@@ -135,8 +140,11 @@ export async function POST(request: NextRequest) {
         salesTaxWithheldAtSource: '0',
         extraTax: '0',
         furtherTax: furtherTax.toString(),
+        fedPayable: fedPayable.toString(),
         saleType: scenario.saleType,
         totalValues: totalValues.toString(),
+        ...(sroScheduleNo && { sroScheduleNo }),
+        ...(sroItemSerialNo && { sroItemSerialNo }),
       });
 
       return [newInvoice];

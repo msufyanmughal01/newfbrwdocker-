@@ -388,18 +388,14 @@ export function FBRTab({ profile }: FBRTabProps) {
         </div>
         <p style={sectionSub}>FBR API credential issued for your registered account.</p>
 
-        {profile?.fbrTokenHint && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: "8px",
-            background: "var(--surface-2)", border: "1px solid var(--border)",
-            borderRadius: "8px", padding: "10px 14px", marginBottom: "12px",
-          }}>
-            <CheckTick size={13}/>
-            <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-              FBR API credential saved
-            </span>
+        <div style={{ marginBottom: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+            <label style={{ ...fieldLabel, marginBottom: 0 }}>FBR API Credential</label>
+            {profile?.fbrTokenHint && (
+              <span style={savedBadge}><CheckTick /> Saved (···{profile.fbrTokenHint})</span>
+            )}
           </div>
-        )}
+        </div>
 
         <input
           type="text"
