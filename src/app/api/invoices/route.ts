@@ -88,7 +88,11 @@ export const POST = withDecryption(async (request: NextRequest, body: unknown) =
         const [{ count }] = await tx
           .select({ count: sql<number>`cast(count(*) as int)` })
           .from(invoices)
-          .where(and(eq(invoices.userId, userId), gte(invoices.createdAt, quota.cycleStart)));
+          .where(and(
+            eq(invoices.userId, userId),
+            eq(invoices.isSandbox, false),
+            gte(invoices.createdAt, quota.cycleStart),
+          ));
 
         if (count >= quota.invoicesPerMonth) {
           throw Object.assign(

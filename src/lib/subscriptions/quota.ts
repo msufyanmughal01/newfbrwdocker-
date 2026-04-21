@@ -75,7 +75,11 @@ export async function getQuotaStatus(userId: string): Promise<QuotaStatus> {
     const [{ count }] = await db
       .select({ count: sql<number>`cast(count(*) as int)` })
       .from(invoices)
-      .where(and(eq(invoices.userId, userId), gte(invoices.createdAt, cycleStart)));
+      .where(and(
+        eq(invoices.userId, userId),
+        eq(invoices.isSandbox, false),
+        gte(invoices.createdAt, cycleStart),
+      ));
 
     invoicesUsed = count;
   }
