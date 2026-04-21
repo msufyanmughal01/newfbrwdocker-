@@ -140,15 +140,6 @@ async function fbrFetchOnce(
     }
 
     if (!response.ok) {
-      if (response.status === 401) {
-        console.error('[FBR] 401 Unauthorized', {
-          url,
-          tokenLen: token.length,
-          tokenHead: token.slice(0, 4),
-          tokenTail: token.slice(-4),
-          body,
-        });
-      }
       throw new FBRApiError(
         `FBR API error ${response.status}: ${response.statusText}`,
         response.status,

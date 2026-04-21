@@ -10,6 +10,22 @@ import { db } from '@/lib/db';
 import { invoices, lineItems } from '@/lib/db/schema/invoices';
 import { encryptData } from '@/lib/crypto/symmetric';
 import { submitInvoiceToFBR } from '@/lib/fbr/submission-service';
+import { FBRApiError } from '@/lib/fbr/api-client';
+
+// Extract a human-readable message from FBR's error body.
+// FBR returns either { validationResponse: { error, errorCode } } or a bare string.
+function extractFBRMessage(body: unknown): string | null {
+  if (!body) return null;
+  if (typeof body === 'string') return body;
+  if (typeof body === 'object') {
+    const b = body as Record<string, unknown>;
+    const vr = b.validationResponse as Record<string, unknown> | undefined;
+    if (vr?.error) return String(vr.error);
+    if (b.error) return String(b.error);
+    if (b.message) return String(b.message);
+  }
+  return null;
+}
 
 // Test data used for all sandbox scenarios
 const TEST_SELLER = {
@@ -207,6 +223,19 @@ export async function POST(request: NextRequest) {
         error: 'Your FBR token has expired. Please update it in Settings → FBR Integration.',
         code,
       }, { status: 400 });
+    }
+    if (error instanceof FBRApiError) {
+      const fbrMessage = extractFBRMessage(error.body);
+      console.error('Sandbox scenario FBR error:', error.statusCode, error.body);
+      return NextResponse.json({
+        success: false,
+        status: 'failed',
+        error: fbrMessage
+          ? `FBR: ${fbrMessage}`
+          : `FBR API error ${error.statusCode}`,
+        fbrStatusCode: error.statusCode,
+        fbrBody: error.body,
+      }, { status: error.statusCode === 401 ? 400 : 502 });
     }
     console.error('Sandbox scenario error:', error);
     return NextResponse.json({
