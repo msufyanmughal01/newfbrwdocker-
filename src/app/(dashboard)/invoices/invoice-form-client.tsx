@@ -22,6 +22,7 @@ import { encryptedPost } from '@/lib/crypto/transit-client';
 interface SellerProfile {
   businessName?: string | null;
   ntnCnic?: string | null;
+  cnic?: string | null;
   province?: string | null;
   address?: string | null;
 }
@@ -67,7 +68,7 @@ function buildDefaultValues(
   return {
     ...DEFAULT_FORM_DATA,
     sellerBusinessName: sellerProfile?.businessName ?? undefined,
-    sellerNTNCNIC: sellerProfile?.ntnCnic ?? undefined,
+    sellerNTNCNIC: sellerProfile?.ntnCnic ?? sellerProfile?.cnic ?? undefined,
     sellerProvince: (sellerProfile?.province ?? undefined) as InvoiceFormData['sellerProvince'],
     sellerAddress: sellerProfile?.address ?? undefined,
     ...initialData,
