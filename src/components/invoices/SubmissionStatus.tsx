@@ -132,26 +132,63 @@ export function SubmissionStatus({
       )}
 
       {/* Failed state */}
-      {isFailed && (
-        errorCode === 'FBR_TOKEN_MISSING' ? (
-          <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 p-4">
-            <div className="flex items-start gap-3">
-              <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-              </svg>
-              <div>
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">FBR Token Not Configured</p>
-                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                  Add your FBR bearer token in{' '}
-                  <a href="/settings/business-profile" className="underline font-semibold hover:opacity-80">
-                    Business Settings
-                  </a>{' '}
-                  to submit invoices.
-                </p>
+      {isFailed && (() => {
+        const isTokenMissing = errorCode === 'FBR_TOKEN_MISSING';
+        const isIpRestriction = !isTokenMissing && !!error && (
+          /invalid.?format/i.test(error) ||
+          /ip.*(not|un).*(register|allow|whitelist)/i.test(error) ||
+          /not.*register.*ip/i.test(error) ||
+          /access.*(denied|forbidden)/i.test(error)
+        );
+        if (isTokenMissing) {
+          return (
+            <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 p-4">
+              <div className="flex items-start gap-3">
+                <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">FBR Token Not Configured</p>
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Add your FBR bearer token in{' '}
+                    <a href="/settings/business-profile" className="underline font-semibold hover:opacity-80">
+                      Business Settings
+                    </a>{' '}
+                    to submit invoices.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
+          );
+        }
+        if (isIpRestriction) {
+          return (
+            <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 p-4">
+              <div className="flex items-start gap-3">
+                <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Server IP Not Registered with FBR</p>
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    FBR returned: <span className="font-mono">{error}</span>
+                  </p>
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300 font-medium">To fix this:</p>
+                  <ol className="mt-1 text-xs text-amber-600 dark:text-amber-400 list-decimal list-inside space-y-1">
+                    <li>Log in to the FBR IRIS portal (iris.fbr.gov.pk)</li>
+                    <li>Go to Digital Invoicing → IP Whitelist / Server Registration</li>
+                    <li>Add your server&apos;s public IP address</li>
+                    <li>Wait a few minutes for FBR to activate it, then retry</li>
+                  </ol>
+                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                    Note: The invoice data and format are correct — only the IP registration is needed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return (
           <div className="rounded-md bg-[var(--error-bg)] border border-[var(--error)]/20 p-4">
             <div className="flex items-start gap-3">
               <svg className="h-5 w-5 text-[var(--error)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -163,8 +200,8 @@ export function SubmissionStatus({
               </div>
             </div>
           </div>
-        )
-      )}
+        );
+      })()}
     </div>
   );
 }

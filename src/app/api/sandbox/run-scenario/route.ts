@@ -1,5 +1,5 @@
 // POST /api/sandbox/run-scenario
-// Builds a scenario-specific FBR payload and POSTs it directly to
+// Builds a scenario-specific FBR payload from testData and POSTs it directly to
 // postinvoicedata_sb. Seller info always comes from the user's business profile.
 // Only available when fbrEnvironment === 'sandbox'.
 
@@ -27,23 +27,6 @@ function extractFBRMessage(body: unknown): string | null {
   }
   return null;
 }
-
-// Buyer used for registered-buyer scenarios — must be a real registered NTN in FBR sandbox
-const TEST_BUYER_REGISTERED = {
-  ntnCnic: '4240124569979',
-  businessName: 'FERTILIZER MANUFAC IRS NEW',
-  province: 'Sindh',
-  address: 'Karachi',
-  registrationType: 'Registered' as const,
-};
-
-const TEST_BUYER_UNREGISTERED = {
-  ntnCnic: null as null,
-  businessName: 'Walk-in Customer',
-  province: 'Sindh',
-  address: 'Karachi',
-  registrationType: 'Unregistered' as const,
-};
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,26 +58,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Unknown scenario: ${scenarioId}` }, { status: 400 });
     }
 
-    const needsRegisteredBuyer = scenario.requiredFields.includes('buyerNTNCNIC');
-    const buyer = needsRegisteredBuyer ? TEST_BUYER_REGISTERED : TEST_BUYER_UNREGISTERED;
-
-    const taxRateMap: Record<string, string> = {
-      '18%': '18%',
-      '17%': '17%',
-      '7%': '7%',
-      '5%': '5%',
-      '0%': '0%',
-      '18% + 2% further tax': '18%',
-    };
-    const rate = taxRateMap[scenario.taxVariant] ?? '18%';
-    const baseValue = 10000;
-    const taxRate = parseFloat(rate) / 100;
-    const salesTax = Math.round(baseValue * taxRate * 100) / 100;
-    const furtherTax = scenario.taxVariant.includes('further tax') ? Math.round(baseValue * 0.02 * 100) / 100 : 0;
-    const totalValues = baseValue + salesTax + furtherTax;
-    const fedPayable = scenarioId === 'SN017' ? Math.round(baseValue * 0.05 * 100) / 100 : 0;
-    const sroScheduleNo = (scenarioId === 'SN005' || scenarioId === 'SN024') ? '297' : '';
-    const sroItemSerialNo = scenarioId === 'SN024' ? '1' : '';
+    const { buyer, item } = scenario.testData;
 
     const seller = {
       ntnCnic: profile.ntnCnic,
@@ -105,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     const invoiceDate = new Date().toISOString().split('T')[0];
 
-    // Build FBR payload directly — POST to postinvoicedata_sb (one call, no separate validate step)
+    // Build FBR payload using scenario testData — seller always from profile
     const fbrPayload = {
       invoiceType: 'Sale Invoice',
       invoiceDate,
@@ -113,32 +77,32 @@ export async function POST(request: NextRequest) {
       sellerBusinessName: seller.businessName,
       sellerProvince: seller.province,
       sellerAddress: seller.address,
-      buyerNTNCNIC: buyer.ntnCnic ?? '',
+      buyerNTNCNIC: buyer.ntnCnic,
       buyerBusinessName: buyer.businessName,
       buyerProvince: buyer.province,
       buyerAddress: buyer.address,
       buyerRegistrationType: buyer.registrationType,
-      invoiceRefNo: '',
+      invoiceRefNo: scenario.testData.invoiceRefNo,
       scenarioId,
       items: [
         {
-          hsCode: '0101.2100',
-          productDescription: `[SANDBOX] ${scenario.description}`,
-          rate,
-          uoM: 'Numbers, pieces, units',
-          quantity: 1,
-          totalValues,
-          valueSalesExcludingST: baseValue,
-          fixedNotifiedValueOrRetailPrice: 0,
-          salesTaxApplicable: salesTax,
-          salesTaxWithheldAtSource: 0,
-          extraTax: '',
-          furtherTax,
-          sroScheduleNo,
-          fedPayable,
-          discount: 0,
-          saleType: scenario.saleType,
-          sroItemSerialNo,
+          hsCode: item.hsCode,
+          productDescription: `[SANDBOX] ${item.productDescription}`,
+          rate: item.rate,
+          uoM: item.uom,
+          quantity: item.quantity > 0 ? item.quantity : 1,
+          totalValues: item.totalValues,
+          valueSalesExcludingST: item.valueSalesExcludingST,
+          fixedNotifiedValueOrRetailPrice: item.fixedNotifiedValueOrRetailPrice,
+          salesTaxApplicable: item.salesTaxApplicable,
+          salesTaxWithheldAtSource: item.salesTaxWithheldAtSource,
+          extraTax: item.extraTax,
+          furtherTax: item.furtherTax,
+          sroScheduleNo: item.sroScheduleNo,
+          fedPayable: item.fedPayable,
+          discount: item.discount,
+          saleType: item.saleType,
+          sroItemSerialNo: item.sroItemSerialNo,
         },
       ],
     };
@@ -157,9 +121,9 @@ export async function POST(request: NextRequest) {
       buyerProvince: buyer.province,
       buyerAddress: buyer.address,
       buyerRegistrationType: buyer.registrationType,
-      subtotal: baseValue.toString(),
-      totalTax: (salesTax + furtherTax).toString(),
-      grandTotal: totalValues.toString(),
+      subtotal: item.valueSalesExcludingST.toString(),
+      totalTax: (item.salesTaxApplicable + item.furtherTax).toString(),
+      grandTotal: item.totalValues > 0 ? item.totalValues.toString() : (item.valueSalesExcludingST + item.salesTaxApplicable + item.furtherTax).toString(),
       status: 'submitting',
       isSandbox: true,
       fbrPayload: { scenarioId, test: true, scenario: scenario.description },
@@ -168,23 +132,23 @@ export async function POST(request: NextRequest) {
     await db.insert(lineItems).values({
       invoiceId: invoice.id,
       lineNumber: 1,
-      hsCode: '0101.2100',
-      productDescription: `[SANDBOX] ${scenario.description}`,
-      quantity: '1',
-      uom: 'Numbers, pieces, units',
-      valueSalesExcludingST: baseValue.toString(),
-      fixedNotifiedValueOrRetailPrice: '0',
-      discount: '0',
-      rate,
-      salesTaxApplicable: salesTax.toString(),
-      salesTaxWithheldAtSource: '0',
-      extraTax: '',
-      furtherTax: furtherTax.toString(),
-      fedPayable: fedPayable.toString(),
-      saleType: scenario.saleType,
-      totalValues: totalValues.toString(),
-      ...(sroScheduleNo ? { sroScheduleNo } : {}),
-      ...(sroItemSerialNo ? { sroItemSerialNo } : {}),
+      hsCode: item.hsCode,
+      productDescription: `[SANDBOX] ${item.productDescription}`,
+      quantity: (item.quantity > 0 ? item.quantity : 1).toString(),
+      uom: item.uom,
+      valueSalesExcludingST: item.valueSalesExcludingST.toString(),
+      fixedNotifiedValueOrRetailPrice: item.fixedNotifiedValueOrRetailPrice.toString(),
+      discount: item.discount.toString(),
+      rate: item.rate,
+      salesTaxApplicable: item.salesTaxApplicable.toString(),
+      salesTaxWithheldAtSource: item.salesTaxWithheldAtSource.toString(),
+      extraTax: item.extraTax.toString(),
+      furtherTax: item.furtherTax.toString(),
+      fedPayable: item.fedPayable.toString(),
+      saleType: item.saleType,
+      totalValues: item.totalValues > 0 ? item.totalValues.toString() : (item.valueSalesExcludingST + item.salesTaxApplicable + item.furtherTax).toString(),
+      ...(item.sroScheduleNo ? { sroScheduleNo: item.sroScheduleNo } : {}),
+      ...(item.sroItemSerialNo ? { sroItemSerialNo: item.sroItemSerialNo } : {}),
     });
 
     // POST directly to FBR postinvoicedata_sb
@@ -221,9 +185,9 @@ export async function POST(request: NextRequest) {
       status: 'passed',
       result: {
         isSandbox: true,
-        grandTotal: totalValues,
-        taxRate: rate,
-        saleType: scenario.saleType,
+        grandTotal: item.totalValues,
+        taxRate: item.rate,
+        saleType: item.saleType,
         fbrInvoiceNumber: fbrResult.invoiceNumber,
         issuedAt: issuedAt.toISOString(),
       },

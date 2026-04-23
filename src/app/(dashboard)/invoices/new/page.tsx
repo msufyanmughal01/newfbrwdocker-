@@ -56,7 +56,7 @@ export default async function NewInvoicePage({
         </div>
 
         <InvoiceFormClient
-          isSandbox={process.env.FBR_ENV === 'sandbox'}
+          isSandbox={sellerProfile?.fbrEnvironment === 'sandbox'}
           sellerProfile={sellerProfile}
           initialDraftId={draftId ?? null}
           initialData={initialData}

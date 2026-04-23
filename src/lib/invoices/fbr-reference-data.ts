@@ -15,12 +15,17 @@ export const FBR_PROVINCES = [
 export type FBRProvince = typeof FBR_PROVINCES[number];
 
 export const FBR_TAX_RATES = [
-  { id: '1', label: '0%', value: 0 },
-  { id: '2', label: '5%', value: 5 },
-  { id: '3', label: '10%', value: 10 },
-  { id: '4', label: '12%', value: 12 },
-  { id: '5', label: '15%', value: 15 },
-  { id: '6', label: '18%', value: 18 }, // Standard rate
+  { id: '1',  label: '0%',  value: 0  },
+  { id: '2',  label: '1%',  value: 1  },
+  { id: '3',  label: '5%',  value: 5  },
+  { id: '4',  label: '7%',  value: 7  },
+  { id: '5',  label: '8%',  value: 8  },
+  { id: '6',  label: '10%', value: 10 },
+  { id: '7',  label: '12%', value: 12 },
+  { id: '8',  label: '15%', value: 15 },
+  { id: '9',  label: '17%', value: 17 },
+  { id: '10', label: '18%', value: 18 },
+  { id: '11', label: '25%', value: 25 },
 ] as const;
 
 export type FBRTaxRate = typeof FBR_TAX_RATES[number];
@@ -67,10 +72,14 @@ export type FBRUOM = typeof FBR_UNITS_OF_MEASUREMENT[number];
 
 export const FBR_SALE_TYPES = [
   'Goods at standard rate (default)',
-  'Goods at reduced rate',
-  'Goods at zero rate',
-  'Services at standard rate',
+  'Goods at Reduced Rate',
+  'Goods at zero-rate',
   'Exempt goods',
+  'Cotton ginners',
+  'Processing/Conversion of Goods',
+  'Goods (FED in ST Mode)',
+  'Goods as per SRO.297(I)/2023',
+  'Services at standard rate',
 ] as const;
 
 export type FBRSaleType = typeof FBR_SALE_TYPES[number];

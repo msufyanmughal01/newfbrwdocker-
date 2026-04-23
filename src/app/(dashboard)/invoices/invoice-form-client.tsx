@@ -14,7 +14,7 @@ import { calculateInvoiceTotals } from '@/lib/invoices/calculations';
 import { FBR_SCENARIOS } from '@/lib/fbr/scenarios';
 import type { InvoiceStatus } from '@/lib/fbr/status-machine';
 import type { FBRErrorItem } from '@/lib/fbr/validate';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClientValidationBadge } from '@/components/invoices/ClientValidationBadge';
 import { encryptedPost } from '@/lib/crypto/transit-client';
@@ -86,6 +86,38 @@ export function InvoiceFormClient({ isSandbox = false, sellerProfile, initialDra
   const [fbrErrors, setFbrErrors] = useState<FBRErrorItem[]>([]);
 
   const [scenarioId, setScenarioId] = useState<string>('SN001');
+
+  // Auto-populate buyer + item fields when scenario is selected (sandbox only)
+  useEffect(() => {
+    if (!isSandbox) return;
+    const scenario = FBR_SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+    const { buyer, item, invoiceRefNo } = scenario.testData;
+    form.setValue('buyerNTNCNIC', buyer.ntnCnic, { shouldValidate: true });
+    form.setValue('buyerBusinessName', buyer.businessName, { shouldValidate: true });
+    form.setValue('buyerProvince', buyer.province as InvoiceFormData['buyerProvince'], { shouldValidate: true });
+    form.setValue('buyerAddress', buyer.address, { shouldValidate: true });
+    form.setValue('buyerRegistrationType', buyer.registrationType, { shouldValidate: true });
+    form.setValue('invoiceRefNo', invoiceRefNo, { shouldValidate: false });
+    form.setValue('items.0.hsCode', item.hsCode, { shouldValidate: true });
+    form.setValue('items.0.productDescription', item.productDescription, { shouldValidate: true });
+    form.setValue('items.0.rate', item.rate, { shouldValidate: true });
+    form.setValue('items.0.uom', item.uom, { shouldValidate: true });
+    form.setValue('items.0.quantity', item.quantity, { shouldValidate: true });
+    form.setValue('items.0.valueSalesExcludingST', item.valueSalesExcludingST, { shouldValidate: true });
+    form.setValue('items.0.fixedNotifiedValueOrRetailPrice', item.fixedNotifiedValueOrRetailPrice, { shouldValidate: true });
+    form.setValue('items.0.salesTaxApplicable', item.salesTaxApplicable, { shouldValidate: true });
+    form.setValue('items.0.salesTaxWithheldAtSource', item.salesTaxWithheldAtSource, { shouldValidate: true });
+    form.setValue('items.0.extraTax', item.extraTax, { shouldValidate: true });
+    form.setValue('items.0.furtherTax', item.furtherTax, { shouldValidate: true });
+    form.setValue('items.0.sroScheduleNo', item.sroScheduleNo, { shouldValidate: true });
+    form.setValue('items.0.fedPayable', item.fedPayable, { shouldValidate: true });
+    form.setValue('items.0.discount', item.discount, { shouldValidate: true });
+    form.setValue('items.0.saleType', item.saleType, { shouldValidate: true });
+    form.setValue('items.0.sroItemSerialNo', item.sroItemSerialNo, { shouldValidate: true });
+    form.setValue('items.0.totalValues', item.totalValues, { shouldValidate: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId, isSandbox]);
 
   const [draftId, setDraftId] = useState<string | null>(initialDraftId ?? null);
   const [isSaving, setIsSaving] = useState(false);
