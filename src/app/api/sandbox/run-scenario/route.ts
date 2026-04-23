@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       buyerProvince: buyer.province,
       buyerAddress: buyer.address,
       buyerRegistrationType: buyer.registrationType,
-      invoiceRefNo: scenario.testData.invoiceRefNo,
+      invoiceRefNo: scenario.testData.invoiceRefNo || `TEST-${scenarioId}-${Date.now()}`,
       scenarioId,
       items: [
         {
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           fixedNotifiedValueOrRetailPrice: item.fixedNotifiedValueOrRetailPrice,
           salesTaxApplicable: item.salesTaxApplicable,
           salesTaxWithheldAtSource: item.salesTaxWithheldAtSource,
-          extraTax: item.extraTax,
+          extraTax: item.extraTax || '',
           furtherTax: item.furtherTax,
           sroScheduleNo: item.sroScheduleNo,
           fedPayable: item.fedPayable,

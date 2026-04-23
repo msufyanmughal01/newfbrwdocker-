@@ -47,7 +47,8 @@
       "Bash(python -m json.tool)",
       "Bash(powershell -Command \"netstat -ano | Select-String '':51461''\")",
       "Bash(curl -s -o /tmp/fbr_resp.txt -w \"HTTP %{http_code}\\\\n\" -X POST \"https://gw.fbr.gov.pk/di_data/v1/di/validateinvoicedata_sb\" -H \"Authorization: Bearer a3ead190-5774-386b-8512-bfb1b62c98a1\" -H \"Content-Type: application/json\" -d '{\"invoiceType\":\"Sale Invoice\",\"invoiceDate\":\"2026-04-21\",\"sellerNTNCNIC\":\"1234567\",\"sellerBusinessName\":\"Test\",\"sellerProvince\":\"Punjab\",\"sellerAddress\":\"Test\",\"buyerNTNCNIC\":\"\",\"buyerBusinessName\":\"Test Buyer\",\"buyerProvince\":\"Punjab\",\"buyerAddress\":\"Test\",\"buyerRegistrationType\":\"Unregistered\",\"invoiceRefNo\":\"\",\"scenarioId\":\"SN002\",\"items\":[{\"hsCode\":\"0101.2100\",\"productDescription\":\"Test\",\"rate\":\"18%\",\"uoM\":\"NOS\",\"quantity\":1,\"totalValues\":11800,\"valueSalesExcludingST\":10000,\"fixedNotifiedValueOrRetailPrice\":0,\"salesTaxApplicable\":1800,\"salesTaxWithheldAtSource\":0,\"extraTax\":\"\",\"furtherTax\":0,\"sroScheduleNo\":\"\",\"fedPayable\":0,\"discount\":0,\"saleType\":\"Goods at standard rate \\(default\\)\",\"sroItemSerialNo\":\"\"}]}')",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
     ]
   }
 }
