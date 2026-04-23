@@ -1,6 +1,7 @@
 // POST /api/sandbox/run-scenario
-// Runs an FBR sandbox test scenario for the authenticated user.
-// Only available when the user's fbrEnvironment is 'sandbox'.
+// Builds a scenario-specific FBR payload and POSTs it directly to
+// postinvoicedata_sb. Seller info always comes from the user's business profile.
+// Only available when fbrEnvironment === 'sandbox'.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
@@ -8,12 +9,12 @@ import { getBusinessProfile } from '@/lib/settings/business-profile';
 import { FBR_SCENARIOS } from '@/lib/fbr/scenarios';
 import { db } from '@/lib/db';
 import { invoices, lineItems } from '@/lib/db/schema/invoices';
+import { fbrSubmissions } from '@/lib/db/schema/fbr';
 import { encryptData } from '@/lib/crypto/symmetric';
-import { submitInvoiceToFBR } from '@/lib/fbr/submission-service';
+import { postToFBR, FBRSubmissionError } from '@/lib/fbr/post-invoice';
 import { FBRApiError } from '@/lib/fbr/api-client';
+import { eq } from 'drizzle-orm';
 
-// Extract a human-readable message from FBR's error body.
-// FBR returns either { validationResponse: { error, errorCode } } or a bare string.
 function extractFBRMessage(body: unknown): string | null {
   if (!body) return null;
   if (typeof body === 'string') return body;
@@ -27,33 +28,24 @@ function extractFBRMessage(body: unknown): string | null {
   return null;
 }
 
-// Test data used for all sandbox scenarios
-const TEST_SELLER = {
-  ntnCnic: '1234567',
-  businessName: 'Test Company (Sandbox)',
-  province: 'Punjab',
-  address: 'Test Address, Lahore',
-};
-
+// Buyer used for registered-buyer scenarios — must be a real registered NTN in FBR sandbox
 const TEST_BUYER_REGISTERED = {
-  ntnCnic: '7654321',
-  businessName: 'Test Buyer (Registered)',
+  ntnCnic: '4240124569979',
+  businessName: 'FERTILIZER MANUFAC IRS NEW',
   province: 'Sindh',
-  address: 'Test Buyer Address, Karachi',
+  address: 'Karachi',
   registrationType: 'Registered' as const,
 };
 
 const TEST_BUYER_UNREGISTERED = {
-  ntnCnic: null,
-  businessName: 'Test Buyer (Unregistered)',
-  province: 'Punjab',
-  address: 'Test Unregistered Buyer Address',
+  ntnCnic: null as null,
+  businessName: 'Walk-in Customer',
+  province: 'Sindh',
+  address: 'Karachi',
   registrationType: 'Unregistered' as const,
 };
 
 export async function POST(request: NextRequest) {
-  // Safety is enforced per-user via profile.fbrEnvironment === 'sandbox' below.
-  // The NODE_ENV check was removed so sandbox testing works in Docker / production builds.
   try {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
@@ -68,6 +60,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!profile.ntnCnic) {
+      return NextResponse.json(
+        { error: 'Your NTN/CNIC is not set in Business Settings. Please add it before running sandbox scenarios.' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { scenarioId } = body as { scenarioId: string };
 
@@ -76,11 +75,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Unknown scenario: ${scenarioId}` }, { status: 400 });
     }
 
-    // Build a minimal test invoice for this scenario
     const needsRegisteredBuyer = scenario.requiredFields.includes('buyerNTNCNIC');
     const buyer = needsRegisteredBuyer ? TEST_BUYER_REGISTERED : TEST_BUYER_UNREGISTERED;
 
-    // Derive tax rate from scenario — stored with '%' to match FBR format and parseTaxRate()
     const taxRateMap: Record<string, string> = {
       '18%': '18%',
       '17%': '17%',
@@ -95,21 +92,62 @@ export async function POST(request: NextRequest) {
     const salesTax = Math.round(baseValue * taxRate * 100) / 100;
     const furtherTax = scenario.taxVariant.includes('further tax') ? Math.round(baseValue * 0.02 * 100) / 100 : 0;
     const totalValues = baseValue + salesTax + furtherTax;
+    const fedPayable = scenarioId === 'SN017' ? Math.round(baseValue * 0.05 * 100) / 100 : 0;
+    const sroScheduleNo = (scenarioId === 'SN005' || scenarioId === 'SN024') ? '297' : '';
+    const sroItemSerialNo = scenarioId === 'SN024' ? '1' : '';
 
     const seller = {
-      ntnCnic: profile?.ntnCnic || TEST_SELLER.ntnCnic,
-      businessName: profile?.businessName || TEST_SELLER.businessName,
-      province: profile?.province || TEST_SELLER.province,
-      address: profile?.address || TEST_SELLER.address,
+      ntnCnic: profile.ntnCnic,
+      businessName: profile.businessName || 'Test Company (Sandbox)',
+      province: profile.province || 'Sindh',
+      address: profile.address || 'Test Address',
     };
 
-    // Insert a test invoice in the DB (marked as sandbox).
-    // Note: no transaction wrapper because the project uses neon-http driver
-    // which doesn't support transactions. Atomicity isn't critical for sandbox test data.
+    const invoiceDate = new Date().toISOString().split('T')[0];
+
+    // Build FBR payload directly — POST to postinvoicedata_sb (one call, no separate validate step)
+    const fbrPayload = {
+      invoiceType: 'Sale Invoice',
+      invoiceDate,
+      sellerNTNCNIC: seller.ntnCnic,
+      sellerBusinessName: seller.businessName,
+      sellerProvince: seller.province,
+      sellerAddress: seller.address,
+      buyerNTNCNIC: buyer.ntnCnic ?? '',
+      buyerBusinessName: buyer.businessName,
+      buyerProvince: buyer.province,
+      buyerAddress: buyer.address,
+      buyerRegistrationType: buyer.registrationType,
+      invoiceRefNo: '',
+      scenarioId,
+      items: [
+        {
+          hsCode: '0101.2100',
+          productDescription: `[SANDBOX] ${scenario.description}`,
+          rate,
+          uoM: 'Numbers, pieces, units',
+          quantity: 1,
+          totalValues,
+          valueSalesExcludingST: baseValue,
+          fixedNotifiedValueOrRetailPrice: 0,
+          salesTaxApplicable: salesTax,
+          salesTaxWithheldAtSource: 0,
+          extraTax: '',
+          furtherTax,
+          sroScheduleNo,
+          fedPayable,
+          discount: 0,
+          saleType: scenario.saleType,
+          sroItemSerialNo,
+        },
+      ],
+    };
+
+    // Save invoice to DB for record-keeping
     const [invoice] = await db.insert(invoices).values({
       userId: session.user.id,
       invoiceType: 'Sale Invoice',
-      invoiceDate: new Date().toISOString().split('T')[0],
+      invoiceDate,
       sellerNTNCNIC: encryptData(seller.ntnCnic),
       sellerBusinessName: seller.businessName,
       sellerProvince: seller.province,
@@ -122,65 +160,58 @@ export async function POST(request: NextRequest) {
       subtotal: baseValue.toString(),
       totalTax: (salesTax + furtherTax).toString(),
       grandTotal: totalValues.toString(),
-      status: 'draft',
+      status: 'submitting',
       isSandbox: true,
-      fbrPayload: {
-        scenarioId,
-        test: true,
-        scenario: scenario.description,
-      },
+      fbrPayload: { scenarioId, test: true, scenario: scenario.description },
     }).returning();
-
-    const fedPayable = scenarioId === 'SN017' ? Math.round(baseValue * 0.05 * 100) / 100 : 0;
-    const sroScheduleNo = (scenarioId === 'SN005' || scenarioId === 'SN024') ? '297' : null;
-    const sroItemSerialNo = scenarioId === 'SN024' ? '1' : null;
 
     await db.insert(lineItems).values({
       invoiceId: invoice.id,
       lineNumber: 1,
       hsCode: '0101.2100',
-      productDescription: `[SANDBOX] ${scenario.description} Test Item`,
+      productDescription: `[SANDBOX] ${scenario.description}`,
       quantity: '1',
-      uom: 'NOS',
+      uom: 'Numbers, pieces, units',
       valueSalesExcludingST: baseValue.toString(),
       fixedNotifiedValueOrRetailPrice: '0',
       discount: '0',
-      rate: rate,
+      rate,
       salesTaxApplicable: salesTax.toString(),
       salesTaxWithheldAtSource: '0',
-      extraTax: '0',
+      extraTax: '',
       furtherTax: furtherTax.toString(),
       fedPayable: fedPayable.toString(),
       saleType: scenario.saleType,
       totalValues: totalValues.toString(),
-      ...(sroScheduleNo && { sroScheduleNo }),
-      ...(sroItemSerialNo && { sroItemSerialNo }),
+      ...(sroScheduleNo ? { sroScheduleNo } : {}),
+      ...(sroItemSerialNo ? { sroItemSerialNo } : {}),
     });
 
-    // Submit to FBR so the scenario is actually recorded on their system
-    const fbrResult = await submitInvoiceToFBR({
+    // POST directly to FBR postinvoicedata_sb
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fbrResult = await postToFBR(fbrPayload as any, session.user.id, profile.fbrEnvironment);
+
+    const issuedAt = new Date();
+
+    // Persist submission record and mark invoice as issued
+    await db.insert(fbrSubmissions).values({
       invoiceId: invoice.id,
-      userId: session.user.id,
+      status: 'issued',
+      environment: 'sandbox',
       scenarioId,
+      attemptedAt: issuedAt,
+      issuedAt,
+      postRequest: fbrPayload as Record<string, unknown>,
+      postResponse: fbrResult as unknown as Record<string, unknown>,
+      fbrInvoiceNumber: fbrResult.invoiceNumber,
     });
 
-    if (!fbrResult.success) {
-      return NextResponse.json({
-        success: false,
-        scenarioId,
-        scenarioDescription: scenario.description,
-        invoiceId: invoice.id,
-        status: 'failed',
-        result: {
-          invoiceCreated: true,
-          isSandbox: true,
-          grandTotal: totalValues,
-          taxRate: rate,
-          saleType: scenario.saleType,
-        },
-        error: fbrResult.errors ?? fbrResult.fbrError,
-      });
-    }
+    await db.update(invoices).set({
+      status: 'issued',
+      fbrInvoiceNumber: fbrResult.invoiceNumber,
+      fbrSubmittedAt: issuedAt,
+      issuedAt,
+    }).where(eq(invoices.id, invoice.id));
 
     return NextResponse.json({
       success: true,
@@ -189,58 +220,58 @@ export async function POST(request: NextRequest) {
       invoiceId: invoice.id,
       status: 'passed',
       result: {
-        invoiceCreated: true,
         isSandbox: true,
         grandTotal: totalValues,
         taxRate: rate,
         saleType: scenario.saleType,
-        fbrInvoiceNumber: fbrResult.fbrInvoiceNumber,
-        issuedAt: fbrResult.issuedAt,
+        fbrInvoiceNumber: fbrResult.invoiceNumber,
+        issuedAt: issuedAt.toISOString(),
       },
     });
+
   } catch (error) {
     const code = (error as Error & { code?: string }).code;
     if (code === 'FBR_TOKEN_DECRYPT_FAILED') {
       return NextResponse.json({
-        success: false,
-        status: 'failed',
-        error: 'Your saved FBR token could not be read. Please re-save your FBR token in Settings → FBR Integration.',
+        success: false, status: 'failed',
+        error: 'Your saved FBR token could not be read. Please re-save it in Settings → FBR Integration.',
         code,
       }, { status: 400 });
     }
     if (code === 'FBR_TOKEN_MISSING') {
       return NextResponse.json({
-        success: false,
-        status: 'failed',
+        success: false, status: 'failed',
         error: 'No FBR token configured. Add your token in Settings → FBR Integration.',
         code,
       }, { status: 400 });
     }
     if (code === 'FBR_TOKEN_EXPIRED') {
       return NextResponse.json({
-        success: false,
-        status: 'failed',
+        success: false, status: 'failed',
         error: 'Your FBR token has expired. Please update it in Settings → FBR Integration.',
         code,
       }, { status: 400 });
+    }
+    if (error instanceof FBRSubmissionError) {
+      return NextResponse.json({
+        success: false, status: 'failed',
+        error: `FBR rejected the invoice: ${error.fbrStatus}`,
+        fbrStatusCode: error.statusCode,
+      }, { status: 422 });
     }
     if (error instanceof FBRApiError) {
       const fbrMessage = extractFBRMessage(error.body);
       console.error('Sandbox scenario FBR error:', error.statusCode, error.body);
       return NextResponse.json({
-        success: false,
-        status: 'failed',
-        error: fbrMessage
-          ? `FBR: ${fbrMessage}`
-          : `FBR API error ${error.statusCode}`,
+        success: false, status: 'failed',
+        error: fbrMessage ? `FBR: ${fbrMessage}` : `FBR API error ${error.statusCode}`,
         fbrStatusCode: error.statusCode,
         fbrBody: error.body,
       }, { status: error.statusCode === 401 ? 400 : 502 });
     }
     console.error('Sandbox scenario error:', error);
     return NextResponse.json({
-      success: false,
-      status: 'failed',
+      success: false, status: 'failed',
       error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
