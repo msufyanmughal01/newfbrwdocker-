@@ -1,0 +1,36 @@
+{
+    "invoiceType": "Sale Invoice",
+    "invoiceDate": "2026-04-25",
+    "sellerNTNCNIC": "4093455",
+    "sellerBusinessName": "xyzlimited",
+    "sellerProvince": "SINDH",
+    "sellerAddress": "Test Address",
+    "buyerNTNCNIC": "2046004",
+    "buyerBusinessName": "FERTILIZER MANUFAC IRS NEW",
+    "buyerProvince": "Sindh",
+    "buyerAddress": "Karachi",
+    "buyerRegistrationType": "Registered",
+    "invoiceRefNo": "TEST-SN001-1777099553300",
+    "scenarioId": "SN001",
+    "items": [
+      {
+        "hsCode": "0101.2100",
+        "productDescription": "Test Item - Standard Rate - Registered Buyer",
+        "rate": "18%",
+        "uoM": "Numbers, pieces, units",
+        "quantity": 1,
+        "totalValues": 1180,
+        "valueSalesExcludingST": 1000,
+        "fixedNotifiedValueOrRetailPrice": 0,
+        "salesTaxApplicable": 180,
+        "salesTaxWithheldAtSource": 0,
+        "extraTax": "",
+        "furtherTax": 0,
+        "sroScheduleNo": "",
+        "fedPayable": 0,
+        "discount": 0,
+        "saleType": "Goods at standard rate (default)",
+        "sroItemSerialNo": ""
+      }
+    ]
+  }

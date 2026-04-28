@@ -3,27 +3,66 @@
 import { useState, useCallback } from "react";
 import type { FBRScenario } from "@/lib/fbr/scenarios";
 
+type CheckStatus = "idle" | "running" | "passed" | "failed";
 type ScenarioStatus = "idle" | "running" | "passed" | "failed";
+
+interface PreflightCheck {
+  id: string;
+  description: string;
+  status: CheckStatus;
+  message?: string;
+  endpoint?: string;
+  durationMs?: number;
+}
 
 interface ScenarioResult {
   status: ScenarioStatus;
   result?: Record<string, unknown>;
   error?: string;
   invoiceId?: string;
+  durationMs?: number;
 }
 
 interface SandboxClientProps {
   scenarios: FBRScenario[];
 }
 
+const INITIAL_PREFLIGHT: PreflightCheck[] = [
+  { id: "API_CONN",    description: "Test basic connectivity to FBR sandbox API" ,              status: "idle" },
+  { id: "TOKEN_VALID", description: "Verify sandbox API token is valid and has required permissions", status: "idle" },
+];
+
 export function SandboxClient({ scenarios }: SandboxClientProps) {
   const [statuses, setStatuses] = useState<Record<string, ScenarioResult>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [runningAll, setRunningAll] = useState(false);
   const [allProgress, setAllProgress] = useState(0);
+  const [preflight, setPreflight] = useState<PreflightCheck[]>(INITIAL_PREFLIGHT);
+  const [preflightRunning, setPreflightRunning] = useState(false);
+
+  const runPreflightChecks = useCallback(async (): Promise<boolean> => {
+    setPreflightRunning(true);
+    setPreflight(INITIAL_PREFLIGHT.map(c => ({ ...c, status: "running" as CheckStatus })));
+    try {
+      const res = await fetch("/api/sandbox/check-connection", { method: "POST" });
+      const data = await res.json();
+      if (data.checks) {
+        setPreflight(data.checks.map((c: PreflightCheck) => ({ ...c })));
+        return data.checks.every((c: PreflightCheck) => c.status === "passed");
+      }
+      setPreflight(INITIAL_PREFLIGHT.map(c => ({ ...c, status: "failed", message: data.error ?? "Unknown error" })));
+      return false;
+    } catch {
+      setPreflight(INITIAL_PREFLIGHT.map(c => ({ ...c, status: "failed", message: "Network error" })));
+      return false;
+    } finally {
+      setPreflightRunning(false);
+    }
+  }, []);
 
   const runScenario = useCallback(async (scenarioId: string): Promise<ScenarioResult> => {
     setStatuses(prev => ({ ...prev, [scenarioId]: { status: "running" } }));
+    const t0 = Date.now();
     try {
       const res = await fetch("/api/sandbox/run-scenario", {
         method: "POST",
@@ -36,6 +75,7 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
         result: data.result,
         error: data.error,
         invoiceId: data.invoiceId,
+        durationMs: Date.now() - t0,
       };
       setStatuses(prev => ({ ...prev, [scenarioId]: result }));
       return result;
@@ -43,6 +83,7 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
       const result: ScenarioResult = {
         status: "failed",
         error: err instanceof Error ? err.message : "Network error",
+        durationMs: Date.now() - t0,
       };
       setStatuses(prev => ({ ...prev, [scenarioId]: result }));
       return result;
@@ -52,6 +93,11 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
   const runAll = async () => {
     setRunningAll(true);
     setAllProgress(0);
+    const ok = await runPreflightChecks();
+    if (!ok) {
+      setRunningAll(false);
+      return;
+    }
     for (let i = 0; i < scenarios.length; i++) {
       await runScenario(scenarios[i].id);
       setAllProgress(i + 1);
@@ -63,6 +109,8 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
   const failedCount = Object.values(statuses).filter(s => s.status === "failed").length;
   const totalRun = passedCount + failedCount;
 
+  const preflightDone = preflight.some(c => c.status !== "idle");
+
   return (
     <div style={{ maxWidth: "960px" }}>
       {/* Header */}
@@ -73,6 +121,76 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
         <p style={{ fontSize: "14px", color: "var(--foreground-muted)", margin: 0 }}>
           Run FBR invoice scenarios in sandbox mode. No real submissions are made.
         </p>
+      </div>
+
+      {/* Pre-flight Checks */}
+      <div style={{
+        background: "var(--surface)", border: "1px solid var(--border, #e2e8f0)",
+        borderRadius: "10px", padding: "14px 18px", marginBottom: "16px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: preflightDone ? "12px" : "0" }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--foreground-muted)", letterSpacing: "0.6px", textTransform: "uppercase" }}>
+            Pre-flight Checks
+          </span>
+          <button
+            onClick={runPreflightChecks}
+            disabled={preflightRunning || runningAll}
+            style={{
+              background: (preflightRunning || runningAll) ? "#e2e8f0" : "#f0f9ff",
+              border: `1px solid ${(preflightRunning || runningAll) ? "#cbd5e1" : "#bfdbfe"}`,
+              borderRadius: "6px", padding: "3px 12px",
+              fontSize: "11px", fontWeight: 700,
+              color: (preflightRunning || runningAll) ? "#94a3b8" : "#1d4ed8",
+              cursor: (preflightRunning || runningAll) ? "not-allowed" : "pointer",
+            }}
+          >
+            {preflightRunning ? "⟳ Checking..." : "Run Checks"}
+          </button>
+        </div>
+
+        {preflightDone && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {preflight.map(check => (
+              <div key={check.id} style={{
+                display: "flex", alignItems: "flex-start", gap: "10px",
+                padding: "8px 10px",
+                background: check.status === "passed" ? "#f0fdf4" : check.status === "failed" ? "#fef2f2" : check.status === "running" ? "#eff6ff" : "#f8fafc",
+                border: `1px solid ${check.status === "passed" ? "#86efac" : check.status === "failed" ? "#fca5a5" : check.status === "running" ? "#bfdbfe" : "#e2e8f0"}`,
+                borderRadius: "7px",
+              }}>
+                <span style={{
+                  background: "#1e3a8a", color: "#fff",
+                  borderRadius: "5px", padding: "2px 7px",
+                  fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px",
+                  flexShrink: 0, marginTop: "1px",
+                }}>
+                  {check.id}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>{check.description}</span>
+                    <CheckStatusBadge status={check.status} />
+                    {check.durationMs !== undefined && check.status !== "running" && (
+                      <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600 }}>
+                        {(check.durationMs / 1000).toFixed(2)}s
+                      </span>
+                    )}
+                  </div>
+                  {check.message && (
+                    <div style={{ fontSize: "11px", color: check.status === "failed" ? "#dc2626" : "#16a34a", marginTop: "2px", fontWeight: 500 }}>
+                      {check.message}
+                    </div>
+                  )}
+                  {check.endpoint && (
+                    <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px", fontFamily: "monospace", wordBreak: "break-all" }}>
+                      {check.endpoint}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Summary bar + Run All */}
@@ -243,14 +361,25 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
                   borderTop: "1px solid var(--border, #e2e8f0)",
                   paddingTop: "8px",
                 }}>
+                  {/* Timing */}
+                  {s.durationMs !== undefined && (
+                    <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "4px", fontWeight: 600 }}>
+                      ⏱ {(s.durationMs / 1000).toFixed(2)}s
+                    </div>
+                  )}
                   {s.status === "failed" && s.error && (
                     <div style={{ fontSize: "11px", color: "#dc2626", marginBottom: "6px" }}>
                       Error: {s.error}
                     </div>
                   )}
+                  {s.status === "passed" && s.result && (
+                    <div style={{ fontSize: "11px", color: "#16a34a", marginBottom: "4px", fontWeight: 500 }}>
+                      FBR Invoice: {String(s.result.fbrInvoiceNumber ?? "")}
+                    </div>
+                  )}
                   {s.invoiceId && (
-                    <div style={{ fontSize: "11px", color: "#16a34a", marginBottom: "4px", fontWeight: 600 }}>
-                      Invoice created: {s.invoiceId.substring(0, 8)}...
+                    <div style={{ fontSize: "11px", color: "#16a34a", marginBottom: "4px" }}>
+                      Invoice ID: {s.invoiceId.substring(0, 8)}...
                     </div>
                   )}
                   <button
@@ -288,6 +417,26 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
         })}
       </div>
     </div>
+  );
+}
+
+function CheckStatusBadge({ status }: { status: CheckStatus }) {
+  const config = {
+    idle:    { label: "Idle",       bg: "#f1f5f9", color: "#64748b", border: "#e2e8f0" },
+    running: { label: "⟳ Checking", bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+    passed:  { label: "✓ Pass",     bg: "#f0fdf4", color: "#16a34a", border: "#86efac" },
+    failed:  { label: "✗ Fail",     bg: "#fef2f2", color: "#dc2626", border: "#fca5a5" },
+  }[status];
+
+  return (
+    <span style={{
+      background: config.bg, color: config.color,
+      border: `1px solid ${config.border}`,
+      borderRadius: "4px", padding: "1px 7px",
+      fontSize: "10px", fontWeight: 700,
+    }}>
+      {config.label}
+    </span>
   );
 }
 
