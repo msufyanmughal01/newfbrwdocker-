@@ -6,6 +6,15 @@ import type { FBRScenario } from "@/lib/fbr/scenarios";
 type CheckStatus = "idle" | "running" | "passed" | "failed";
 type ScenarioStatus = "idle" | "running" | "passed" | "failed";
 
+interface ApiCallDetails {
+  method: string;
+  endpoint: string;
+  body?: unknown;
+  response?: unknown;
+  durationMs?: number;
+  statusCode?: number | string;
+}
+
 interface PreflightCheck {
   id: string;
   description: string;
@@ -13,14 +22,17 @@ interface PreflightCheck {
   message?: string;
   endpoint?: string;
   durationMs?: number;
+  apiCall?: ApiCallDetails;
 }
 
 interface ScenarioResult {
   status: ScenarioStatus;
   result?: Record<string, unknown>;
   error?: string;
+  message?: string;
   invoiceId?: string;
   durationMs?: number;
+  apiCall?: ApiCallDetails;
 }
 
 interface SandboxClientProps {
@@ -34,7 +46,6 @@ const INITIAL_PREFLIGHT: PreflightCheck[] = [
 
 export function SandboxClient({ scenarios }: SandboxClientProps) {
   const [statuses, setStatuses] = useState<Record<string, ScenarioResult>>({});
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [runningAll, setRunningAll] = useState(false);
   const [allProgress, setAllProgress] = useState(0);
   const [preflight, setPreflight] = useState<PreflightCheck[]>(INITIAL_PREFLIGHT);
@@ -43,6 +54,7 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
   const runPreflightChecks = useCallback(async (): Promise<boolean> => {
     setPreflightRunning(true);
     setPreflight(INITIAL_PREFLIGHT.map(c => ({ ...c, status: "running" as CheckStatus })));
+    const t0 = Date.now();
     try {
       const res = await fetch("/api/sandbox/check-connection", { method: "POST" });
       const data = await res.json();
@@ -50,10 +62,35 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
         setPreflight(data.checks.map((c: PreflightCheck) => ({ ...c })));
         return data.checks.every((c: PreflightCheck) => c.status === "passed");
       }
-      setPreflight(INITIAL_PREFLIGHT.map(c => ({ ...c, status: "failed", message: data.error ?? "Unknown error" })));
+      const durationMs = Date.now() - t0;
+      setPreflight(INITIAL_PREFLIGHT.map(c => ({
+        ...c,
+        status: "failed",
+        message: data.error ?? "Unknown error",
+        durationMs,
+        apiCall: {
+          method: "POST",
+          endpoint: "/api/sandbox/check-connection",
+          response: data,
+          durationMs,
+          statusCode: res.status,
+        },
+      })));
       return false;
-    } catch {
-      setPreflight(INITIAL_PREFLIGHT.map(c => ({ ...c, status: "failed", message: "Network error" })));
+    } catch (err) {
+      const durationMs = Date.now() - t0;
+      setPreflight(INITIAL_PREFLIGHT.map(c => ({
+        ...c,
+        status: "failed",
+        message: "Network error",
+        durationMs,
+        apiCall: {
+          method: "POST",
+          endpoint: "/api/sandbox/check-connection",
+          response: { error: err instanceof Error ? err.message : "Network error" },
+          durationMs,
+        },
+      })));
       return false;
     } finally {
       setPreflightRunning(false);
@@ -70,12 +107,22 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
         body: JSON.stringify({ scenarioId }),
       });
       const data = await res.json();
+      const apiCall = {
+        method: "POST",
+        endpoint: "/api/sandbox/run-scenario",
+        body: { scenarioId },
+        response: data,
+        durationMs: Date.now() - t0,
+        statusCode: res.status,
+      };
       const result: ScenarioResult = {
         status: data.success ? "passed" : "failed",
         result: data.result,
         error: data.error,
+        message: data.message,
         invoiceId: data.invoiceId,
-        durationMs: Date.now() - t0,
+        durationMs: data.durationMs ?? apiCall.durationMs,
+        apiCall: data.apiCall ?? apiCall,
       };
       setStatuses(prev => ({ ...prev, [scenarioId]: result }));
       return result;
@@ -84,6 +131,13 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
         status: "failed",
         error: err instanceof Error ? err.message : "Network error",
         durationMs: Date.now() - t0,
+        apiCall: {
+          method: "POST",
+          endpoint: "/api/sandbox/run-scenario",
+          body: { scenarioId },
+          response: { error: err instanceof Error ? err.message : "Network error" },
+          durationMs: Date.now() - t0,
+        },
       };
       setStatuses(prev => ({ ...prev, [scenarioId]: result }));
       return result;
@@ -186,6 +240,7 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
                       {check.endpoint}
                     </div>
                   )}
+                  <ApiDetails apiCall={check.apiCall} />
                 </div>
               </div>
             ))}
@@ -266,7 +321,6 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
         {scenarios.map(scenario => {
           const s = statuses[scenario.id];
           const status = s?.status ?? "idle";
-          const isExpanded = expanded[scenario.id];
 
           return (
             <div
@@ -382,40 +436,71 @@ export function SandboxClient({ scenarios }: SandboxClientProps) {
                       Invoice ID: {s.invoiceId.substring(0, 8)}...
                     </div>
                   )}
-                  <button
-                    onClick={() => setExpanded(prev => ({ ...prev, [scenario.id]: !prev[scenario.id] }))}
-                    style={{
-                      background: "none", border: "none", padding: 0,
-                      fontSize: "11px", color: "#64748b", cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {isExpanded ? "▲ Hide result" : "▼ Show result JSON"}
-                  </button>
-                  {isExpanded && (
-                    <pre style={{
-                      marginTop: "6px",
-                      background: "#f8faff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "6px",
-                      padding: "8px",
-                      fontSize: "10px",
-                      color: "#374151",
-                      overflow: "auto",
-                      maxHeight: "150px",
-                      fontFamily: "monospace",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-all",
-                    }}>
-                      {JSON.stringify(s.result ?? { error: s.error }, null, 2)}
-                    </pre>
-                  )}
+                  <ApiDetails apiCall={s.apiCall} />
                 </div>
               )}
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function ApiDetails({ apiCall }: { apiCall?: ApiCallDetails }) {
+  if (!apiCall) return null;
+
+  return (
+    <details style={{ marginTop: "6px" }}>
+      <summary style={{
+        fontSize: "11px",
+        color: "#64748b",
+        cursor: "pointer",
+        fontWeight: 700,
+      }}>
+        Show API details
+      </summary>
+      <div style={{
+        marginTop: "6px",
+        background: "#f8faff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "6px",
+        padding: "8px",
+      }}>
+        <div style={{ fontSize: "10px", color: "#475569", fontFamily: "monospace", wordBreak: "break-all", marginBottom: "6px" }}>
+          {apiCall.method} {apiCall.endpoint}
+          {apiCall.statusCode !== undefined ? ` (${apiCall.statusCode})` : ""}
+          {apiCall.durationMs !== undefined ? ` - ${(apiCall.durationMs / 1000).toFixed(2)}s` : ""}
+        </div>
+        <JsonBlock title="Request body" value={apiCall.body ?? null} />
+        <JsonBlock title="Response" value={apiCall.response ?? null} />
+      </div>
+    </details>
+  );
+}
+
+function JsonBlock({ title, value }: { title: string; value: unknown }) {
+  return (
+    <div style={{ marginTop: "6px" }}>
+      <div style={{ fontSize: "10px", color: "#334155", fontWeight: 700, marginBottom: "3px" }}>
+        {title}
+      </div>
+      <pre style={{
+        margin: 0,
+        background: "#fff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "5px",
+        padding: "7px",
+        fontSize: "10px",
+        color: "#374151",
+        overflow: "auto",
+        maxHeight: "180px",
+        fontFamily: "monospace",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-all",
+      }}>
+        {JSON.stringify(value, null, 2)}
+      </pre>
     </div>
   );
 }

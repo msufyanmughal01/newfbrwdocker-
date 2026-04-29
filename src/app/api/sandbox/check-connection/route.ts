@@ -4,10 +4,26 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getBusinessProfile } from '@/lib/settings/business-profile';
 import { fbrPost, FBRApiError } from '@/lib/fbr/api-client';
+import { FBRContextError, validateFBRContext } from '@/lib/fbr/context';
 
 const SANDBOX_ENDPOINT = 'https://gw.fbr.gov.pk/di_data/v1/di/validateinvoicedata_sb';
+
+function buildApiCall(
+  body: Record<string, unknown>,
+  response: unknown,
+  durationMs: number,
+  statusCode?: number
+) {
+  return {
+    method: 'POST',
+    endpoint: SANDBOX_ENDPOINT,
+    body,
+    response,
+    durationMs,
+    statusCode,
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,8 +32,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await getBusinessProfile(session.user.id);
-    if (profile?.fbrEnvironment !== 'sandbox') {
+    let context;
+    try {
+      context = await validateFBRContext(session.user.id);
+    } catch (error) {
+      if (error instanceof FBRContextError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+      throw error;
+    }
+
+    if (context.environment !== 'sandbox') {
       return NextResponse.json({ error: 'Sandbox mode not enabled' }, { status: 403 });
     }
 
@@ -25,10 +50,10 @@ export async function POST(request: NextRequest) {
     const testPayload = {
       invoiceType: 'Sale Invoice',
       invoiceDate: today,
-      sellerNTNCNIC: profile.ntnCnic || '4210193397701',
-      sellerBusinessName: profile.businessName || 'xyzlimited',
-      sellerProvince: profile.province || 'SINDH',
-      sellerAddress: profile.address || 'Test Address',
+      sellerNTNCNIC: context.ntn,
+      sellerBusinessName: context.profile.businessName ?? '',
+      sellerProvince: context.profile.province ?? '',
+      sellerAddress: context.profile.address ?? '',
       buyerNTNCNIC: '2046004',
       buyerBusinessName: 'FERTILIZER MANUFAC IRS NEW',
       buyerProvince: 'Sindh',
@@ -62,10 +87,12 @@ export async function POST(request: NextRequest) {
     let tokenValidPassed = false;
     let apiConnMessage = 'Could not connect to FBR sandbox API';
     let tokenMessage = 'Token validation not attempted';
+    let apiResponse: unknown = null;
+    let apiStatusCode: number | undefined;
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await fbrPost('validateinvoicedata', testPayload as any, session.user.id, 'sandbox');
+      apiResponse = await fbrPost('validateinvoicedata', testPayload as any, session.user.id, 'sandbox');
       apiConnPassed = true;
       tokenValidPassed = true;
       apiConnMessage = 'Successfully connected to FBR sandbox API';
@@ -81,10 +108,16 @@ export async function POST(request: NextRequest) {
         apiConnMessage = 'Successfully connected to FBR sandbox API';
         tokenMessage = 'FBR token has expired. Please update it in Settings → FBR Integration.';
       } else if (err instanceof FBRApiError) {
-        if (err.statusCode === 401 || err.statusCode === 403) {
+        apiResponse = err.body;
+        apiStatusCode = err.statusCode;
+        if (err.statusCode === 401) {
           apiConnPassed = true;
           apiConnMessage = 'Successfully connected to FBR sandbox API';
-          tokenMessage = 'API token is invalid or lacks required permissions (401)';
+          tokenMessage = 'FBR rejected request: token is not authorized for this NTN';
+        } else if (err.statusCode === 403) {
+          apiConnPassed = true;
+          apiConnMessage = 'Successfully connected to FBR sandbox API';
+          tokenMessage = 'API token is invalid or lacks required permissions (403)';
         } else {
           // 4xx validation errors mean API is reachable and token is accepted
           apiConnPassed = true;
@@ -93,12 +126,14 @@ export async function POST(request: NextRequest) {
           tokenMessage = 'API token is valid and authorized';
         }
       } else {
+        apiResponse = { error: (err as Error).message };
         apiConnMessage = `Network error: ${(err as Error).message}`;
         tokenMessage = 'Connection failed — cannot verify token';
       }
     }
 
     const durationMs = Date.now() - t0;
+    const apiCall = buildApiCall(testPayload, apiResponse, durationMs, apiStatusCode);
 
     return NextResponse.json({
       checks: [
@@ -109,6 +144,7 @@ export async function POST(request: NextRequest) {
           message: apiConnMessage,
           endpoint: SANDBOX_ENDPOINT,
           durationMs,
+          apiCall,
         },
         {
           id: 'TOKEN_VALID',
@@ -117,6 +153,7 @@ export async function POST(request: NextRequest) {
           message: tokenMessage,
           endpoint: SANDBOX_ENDPOINT,
           durationMs,
+          apiCall,
         },
       ],
     });

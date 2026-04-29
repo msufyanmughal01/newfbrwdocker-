@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getBusinessProfile } from '@/lib/settings/business-profile';
 import { FBR_SCENARIOS } from '@/lib/fbr/scenarios';
 import { db } from '@/lib/db';
 import { invoices, lineItems } from '@/lib/db/schema/invoices';
@@ -14,6 +13,34 @@ import { encryptData } from '@/lib/crypto/symmetric';
 import { postToFBR, FBRSubmissionError } from '@/lib/fbr/post-invoice';
 import { FBRApiError } from '@/lib/fbr/api-client';
 import { eq } from 'drizzle-orm';
+import { FBRContextError, validateFBRContext } from '@/lib/fbr/context';
+
+const SANDBOX_POST_ENDPOINT = 'https://gw.fbr.gov.pk/di_data/v1/di/postinvoicedata_sb';
+
+interface ApiCallDetails {
+  method: 'POST';
+  endpoint: string;
+  body?: unknown;
+  response?: unknown;
+  durationMs: number;
+  statusCode?: number | string;
+}
+
+function buildApiCall(
+  body: unknown,
+  response: unknown,
+  durationMs: number,
+  statusCode?: number | string
+): ApiCallDetails {
+  return {
+    method: 'POST',
+    endpoint: SANDBOX_POST_ENDPOINT,
+    body,
+    response,
+    durationMs,
+    statusCode,
+  };
+}
 
 function extractFBRMessage(body: unknown): string | null {
   if (!body) return null;
@@ -29,24 +56,30 @@ function extractFBRMessage(body: unknown): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  const t0 = Date.now();
+  let apiCall: ApiCallDetails | undefined;
+  let fbrRequestBody: unknown;
+
   try {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await getBusinessProfile(session.user.id);
-    if (profile?.fbrEnvironment !== 'sandbox') {
+    let context;
+    try {
+      context = await validateFBRContext(session.user.id);
+    } catch (error) {
+      if (error instanceof FBRContextError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+      throw error;
+    }
+
+    if (context.environment !== 'sandbox') {
       return NextResponse.json(
         { error: 'Sandbox scenarios are only available in sandbox mode. Enable sandbox in Settings > FBR Integration.' },
         { status: 403 }
-      );
-    }
-
-    if (!profile.ntnCnic) {
-      return NextResponse.json(
-        { error: 'Your NTN/CNIC is not set in Business Settings. Please add it before running sandbox scenarios.' },
-        { status: 400 }
       );
     }
 
@@ -61,10 +94,10 @@ export async function POST(request: NextRequest) {
     const { buyer, item } = scenario.testData;
 
     const seller = {
-      ntnCnic: profile.ntnCnic,
-      businessName: profile.businessName || 'Test Company (Sandbox)',
-      province: profile.province || 'Sindh',
-      address: profile.address || 'Test Address',
+      ntnCnic: context.ntn,
+      businessName: context.profile.businessName ?? '',
+      province: context.profile.province ?? '',
+      address: context.profile.address ?? '',
     };
 
     const invoiceDate = new Date().toISOString().split('T')[0];
@@ -106,6 +139,7 @@ export async function POST(request: NextRequest) {
         },
       ],
     };
+    fbrRequestBody = fbrPayload;
 
     // Save invoice to DB for record-keeping
     const [invoice] = await db.insert(invoices).values({
@@ -153,7 +187,9 @@ export async function POST(request: NextRequest) {
 
     // POST directly to FBR postinvoicedata_sb
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fbrResult = await postToFBR(fbrPayload as any, session.user.id, profile.fbrEnvironment);
+    const fbrResult = await postToFBR(fbrPayload as any, session.user.id, context.environment);
+    const durationMs = Date.now() - t0;
+    apiCall = buildApiCall(fbrPayload, fbrResult, durationMs);
 
     const issuedAt = new Date();
 
@@ -183,6 +219,9 @@ export async function POST(request: NextRequest) {
       scenarioDescription: scenario.description,
       invoiceId: invoice.id,
       status: 'passed',
+      message: 'FBR sandbox scenario completed successfully',
+      durationMs,
+      apiCall,
       result: {
         isSandbox: true,
         grandTotal: item.totalValues,
@@ -195,11 +234,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     const code = (error as Error & { code?: string }).code;
+    const durationMs = Date.now() - t0;
     if (code === 'FBR_TOKEN_DECRYPT_FAILED') {
       return NextResponse.json({
         success: false, status: 'failed',
         error: 'Your saved FBR token could not be read. Please re-save it in Settings → FBR Integration.',
         code,
+        durationMs,
       }, { status: 400 });
     }
     if (code === 'FBR_TOKEN_MISSING') {
@@ -207,6 +248,7 @@ export async function POST(request: NextRequest) {
         success: false, status: 'failed',
         error: 'No FBR token configured. Add your token in Settings → FBR Integration.',
         code,
+        durationMs,
       }, { status: 400 });
     }
     if (code === 'FBR_TOKEN_EXPIRED') {
@@ -214,29 +256,42 @@ export async function POST(request: NextRequest) {
         success: false, status: 'failed',
         error: 'Your FBR token has expired. Please update it in Settings → FBR Integration.',
         code,
+        durationMs,
       }, { status: 400 });
     }
     if (error instanceof FBRSubmissionError) {
+      apiCall = buildApiCall(fbrRequestBody, {
+        statusCode: error.statusCode,
+        status: error.fbrStatus,
+        message: error.message,
+      }, durationMs, error.statusCode);
       return NextResponse.json({
         success: false, status: 'failed',
         error: `FBR rejected the invoice: ${error.fbrStatus}`,
         fbrStatusCode: error.statusCode,
+        durationMs,
+        apiCall,
       }, { status: 422 });
     }
     if (error instanceof FBRApiError) {
       const fbrMessage = extractFBRMessage(error.body);
+      apiCall = buildApiCall(fbrRequestBody, error.body, durationMs, error.statusCode);
       console.error('Sandbox scenario FBR error:', error.statusCode, error.body);
       return NextResponse.json({
         success: false, status: 'failed',
         error: fbrMessage ? `FBR: ${fbrMessage}` : `FBR API error ${error.statusCode}`,
         fbrStatusCode: error.statusCode,
         fbrBody: error.body,
+        durationMs,
+        apiCall,
       }, { status: error.statusCode === 401 ? 400 : 502 });
     }
     console.error('Sandbox scenario error:', error);
     return NextResponse.json({
       success: false, status: 'failed',
       error: error instanceof Error ? error.message : 'Unknown error',
+      durationMs,
+      apiCall,
     }, { status: 500 });
   }
 }
