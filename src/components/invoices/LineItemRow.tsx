@@ -157,8 +157,8 @@ export const LineItemRow = memo(function LineItemRow({
               className={`${inputBase} ${itemErrors?.uom ? inputError : inputNormal}`}
             >
               <option value="">Select...</option>
-              {uomOptions.map((uom) => (
-                <option key={uom} value={uom}>{uom}</option>
+              {uomOptions.map((uom, i) => (
+                <option key={`${uom}-${i}`} value={uom}>{uom}</option>
               ))}
             </select>
             {itemErrors?.uom && (
@@ -219,8 +219,8 @@ export const LineItemRow = memo(function LineItemRow({
               className={`${inputBase} ${itemErrors?.rate ? inputError : inputNormal}`}
             >
               <option value="">Select...</option>
-              {taxRateOptions.map((rate) => (
-                <option key={rate.id} value={rate.label}>{rate.label}</option>
+              {taxRateOptions.map((rate, i) => (
+                <option key={`${rate.id}-${i}`} value={rate.label}>{rate.label}</option>
               ))}
             </select>
             {itemErrors?.rate && (

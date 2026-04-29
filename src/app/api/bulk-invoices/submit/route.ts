@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   // Load seller info from user's business profile
   const profile = await getBusinessProfile(session.user.id);
-  const sellerNTNCNIC = profile?.ntnCnic ?? "";
+  const sellerNTNCNIC = profile?.cnic ?? profile?.ntnCnic ?? "";
   const sellerBusinessName = profile?.businessName ?? "";
   const sellerProvince = profile?.province ?? "Punjab";
   const sellerAddress = profile?.address ?? "";

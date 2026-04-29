@@ -69,9 +69,12 @@ export async function validateFBRContext(userId: string): Promise<FBRContext> {
     throw new FBRContextError('Business profile not found', 'FBR_PROFILE_MISSING', 404);
   }
 
-  const ntn = profile.ntnCnic?.trim() ?? null;
-  if (!ntn) {
-    throw new FBRContextError('Your NTN/CNIC is required to call FBR APIs', 'FBR_NTN_MISSING', 400);
+  // Candidates for seller identifier (NTN or CNIC)
+  const ntnCandidate = profile.ntnCnic?.trim() ?? null;
+  const cnicCandidate = profile.cnic?.trim() ?? null;
+
+  if (!ntnCandidate && !cnicCandidate) {
+    throw new FBRContextError('Your NTN or CNIC is required to call FBR APIs', 'FBR_NTN_MISSING', 400);
   }
 
   const rows = await db
@@ -87,12 +90,12 @@ export async function validateFBRContext(userId: string): Promise<FBRContext> {
   const record = rows[0];
 
   if (!record?.fbrTokenEncrypted) {
-    logContext(userId, ntn, false);
+    logContext(userId, ntnCandidate || cnicCandidate, false);
     throw new FBRContextError('No FBR token configured for your account', 'FBR_TOKEN_MISSING', 400);
   }
 
   if (record.fbrTokenExpiresAt && record.fbrTokenExpiresAt < new Date()) {
-    logContext(userId, ntn, false);
+    logContext(userId, ntnCandidate || cnicCandidate, false);
     throw new FBRContextError('Your FBR token has expired', 'FBR_TOKEN_EXPIRED', 400);
   }
 
@@ -100,7 +103,7 @@ export async function validateFBRContext(userId: string): Promise<FBRContext> {
   try {
     token = decrypt(record.fbrTokenEncrypted).trim();
   } catch {
-    logContext(userId, ntn, false);
+    logContext(userId, ntnCandidate || cnicCandidate, false);
     throw new FBRContextError(
       'Your saved FBR token could not be decrypted. Please re-save it in Settings → FBR Integration.',
       'FBR_TOKEN_DECRYPT_FAILED',
@@ -109,7 +112,7 @@ export async function validateFBRContext(userId: string): Promise<FBRContext> {
   }
 
   if (!token) {
-    logContext(userId, ntn, false);
+    logContext(userId, ntnCandidate || cnicCandidate, false);
     throw new FBRContextError(
       'Your saved FBR token could not be decrypted. Please re-save it in Settings → FBR Integration.',
       'FBR_TOKEN_DECRYPT_FAILED',
@@ -117,22 +120,40 @@ export async function validateFBRContext(userId: string): Promise<FBRContext> {
     );
   }
 
-  const ownerNtn = extractOwnerIdentifier(token);
-  if (ownerNtn && ownerNtn !== ntn) {
-    logContext(userId, ntn, false);
-    throw new FBRContextError(
-      'FBR token does not belong to your NTN/CNIC',
-      'FBR_TOKEN_OWNER_MISMATCH',
-      403
-    );
+  // Determine which identifier to use as sellerNTNCNIC
+  const tokenOwner = extractOwnerIdentifier(token);
+  let finalId: string | null = null;
+
+  if (tokenOwner) {
+    // If token contains an owner ID, it MUST match one of ours
+    if (tokenOwner === ntnCandidate) {
+      finalId = ntnCandidate;
+    } else if (tokenOwner === cnicCandidate) {
+      finalId = cnicCandidate;
+    } else {
+      logContext(userId, tokenOwner, false);
+      throw new FBRContextError(
+        `FBR token belongs to ${tokenOwner}, which does not match your NTN (${ntnCandidate}) or CNIC (${cnicCandidate})`,
+        'FBR_TOKEN_OWNER_MISMATCH',
+        403
+      );
+    }
+  } else {
+    // If no owner in token, default to CNIC then NTN (per user request for CNIC preference)
+    finalId = cnicCandidate || ntnCandidate;
   }
 
-  logContext(userId, ntn, true);
+  if (!finalId) {
+    // Should be unreachable given the check at top
+    throw new FBRContextError('Could not determine seller identifier', 'FBR_ID_NOT_DETERMINED', 400);
+  }
+
+  logContext(userId, finalId, true);
 
   return {
     userId,
     profile,
-    ntn,
+    ntn: finalId,
     token,
     environment: normalizeEnv(record.fbrEnvironment ?? profile.fbrEnvironment),
   };

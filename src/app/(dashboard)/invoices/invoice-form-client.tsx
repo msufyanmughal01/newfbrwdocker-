@@ -68,7 +68,7 @@ function buildDefaultValues(
   return {
     ...DEFAULT_FORM_DATA,
     sellerBusinessName: sellerProfile?.businessName ?? undefined,
-    sellerNTNCNIC: sellerProfile?.ntnCnic ?? sellerProfile?.cnic ?? undefined,
+    sellerNTNCNIC: sellerProfile?.cnic ?? sellerProfile?.ntnCnic ?? undefined,
     sellerProvince: (sellerProfile?.province ?? undefined) as InvoiceFormData['sellerProvince'],
     sellerAddress: sellerProfile?.address ?? undefined,
     ...initialData,
