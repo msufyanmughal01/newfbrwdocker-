@@ -54,7 +54,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Most common scenario. Buyer is registered for sales tax.',
     testData: {
       buyer: {
-        ntnCnic: '1000000000000',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -91,7 +91,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of standard rate goods (18%) to unregistered buyers.',
     testData: {
       buyer: {
-        ntnCnic: '1000000000000',
+        ntnCnic: '2046004',
         businessName: 'Walk-in Customer',
         province: 'Sindh',
         address: 'Karachi',
@@ -165,7 +165,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of steel scrap by ship breaking yards at 17% ST.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -239,7 +239,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of exempt goods (Sixth Schedule).',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -350,7 +350,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Purchase from registered cotton ginners.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -424,7 +424,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of steel through toll manufacturing process.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -794,7 +794,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of cement at fixed ST rate per kg under Third Schedule.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -942,7 +942,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Drugs sold at fixed ST rate per Serial 81 of the Eighth Schedule.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -979,7 +979,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of standard rate goods to end consumers by retailers.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -1016,7 +1016,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of 3rd schedule goods to end consumers by retailers.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
@@ -1053,7 +1053,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Sale of reduced rate goods to end consumers by retailers.',
     testData: {
       buyer: {
-        ntnCnic: '4093455',
+        ntnCnic: '2046004',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
