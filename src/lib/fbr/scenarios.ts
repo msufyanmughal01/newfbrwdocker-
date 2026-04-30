@@ -54,7 +54,7 @@ export const FBR_SCENARIOS: FBRScenario[] = [
     notes: 'Most common scenario. Buyer is registered for sales tax.',
     testData: {
       buyer: {
-        ntnCnic: '2021222',
+        ntnCnic: '4240124569979',
         businessName: 'FERTILIZER MANUFAC IRS NEW',
         province: 'Sindh',
         address: 'Karachi',
